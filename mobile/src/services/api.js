@@ -103,6 +103,23 @@ class ApiService {
     if (!response.ok) throw new Error('Failed to send message');
     return response.json();
   }
+
+  async submitFreeWrite(token, title, storyText) {
+    const response = await fetch(`${API_URL}/api/prompts/freewrite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title,
+        response: storyText,
+      }),
+    });
+    
+    if (!response.ok) throw new Error('Failed to submit story');
+    return response.json();
+  }
 }
 
 export default new ApiService();

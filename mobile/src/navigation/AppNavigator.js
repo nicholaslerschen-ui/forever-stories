@@ -8,6 +8,7 @@ import DailyPromptScreen from '../screens/DailyPromptScreen';
 import MyStoriesScreen from '../screens/MyStoriesScreen';
 import StoryDetailScreen from '../screens/StoryDetailScreen';
 import AIChatScreen from '../screens/AIChatScreen';
+import FreeWriteScreen from '../screens/FreeWriteScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MyStories" component={MyStoriesScreen} />
         <Stack.Screen name="StoryDetail" component={StoryDetailScreen} />
         <Stack.Screen name="AIChat" component={AIChatScreen} />
+        <Stack.Screen name="FreeWrite" component={FreeWriteScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

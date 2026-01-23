@@ -84,6 +84,13 @@ export default function DashboardScreen({ navigation }) {
         <Text style={styles.aiButtonText}>🤖 Chat with AI Persona</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.freeWriteButton}
+        onPress={() => navigation.navigate('FreeWrite')}
+      >
+        <Text style={styles.freeWriteButtonText}>✍️ Free Write</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
@@ -185,6 +192,20 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#e11d48',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+freeWriteButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  freeWriteButtonText: {
+    color: '#10b981',
+    fontSize: 18,
     fontWeight: 'bold',
   },
 });
