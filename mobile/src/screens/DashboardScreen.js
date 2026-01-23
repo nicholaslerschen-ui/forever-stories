@@ -34,11 +34,6 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
-  const handleLogout = async () => {
-    await AsyncStorage.clear();
-    navigation.replace('Login');
-  };
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -91,8 +86,11 @@ export default function DashboardScreen({ navigation }) {
         <Text style={styles.freeWriteButtonText}>✍️ Free Write</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
+      <TouchableOpacity
+        style={styles.accountButton}
+        onPress={() => navigation.navigate('Account')}
+      >
+        <Text style={styles.accountButtonText}>⚙️ Account Settings</Text>
       </TouchableOpacity>
     </View>
   );
@@ -178,23 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  logoutButton: {
-    position: 'absolute',
-    bottom: 40,
-    left: 20,
-    right: 20,
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e11d48',
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#e11d48',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-freeWriteButton: {
+  freeWriteButton: {
     backgroundColor: '#fff',
     borderWidth: 2,
     borderColor: '#10b981',
@@ -205,6 +187,20 @@ freeWriteButton: {
   },
   freeWriteButtonText: {
     color: '#10b981',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  accountButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#64748b',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  accountButtonText: {
+    color: '#64748b',
     fontSize: 18,
     fontWeight: 'bold',
   },

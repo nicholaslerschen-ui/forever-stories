@@ -49,16 +49,18 @@ export default function DailyPromptScreen({ navigation }) {
       return;
     }
 
-    if (!prompt || !prompt.id) {
-      Alert.alert('Error', 'No prompt available');
-      return;
-    }
-
     setSubmitting(true);
     try {
       const token = await AsyncStorage.getItem('authToken');
-      await ApiService.submitPromptResponse(token, prompt.id, response);
-      
+
+      // Include submittedQuestionId if this is a question from family
+      await ApiService.submitPromptResponse(
+        token,
+        prompt?.id || null,
+        response,
+        prompt?.submittedQuestionId || null
+      );
+
       Alert.alert('Success!', 'Your story has been saved!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -107,7 +109,15 @@ export default function DailyPromptScreen({ navigation }) {
       </TouchableOpacity>
 
       <Text style={styles.title}>Today's Prompt</Text>
-      
+
+      {prompt?.type === 'submitted' && (
+        <View style={styles.submittedBadge}>
+          <Text style={styles.submittedBadgeText}>
+            💝 Question from {prompt.submitterInfo?.name || 'Family'}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.promptCard}>
         <Text style={styles.category}>{prompt?.category || 'Personal'}</Text>
         <Text style={styles.promptText}>{prompt?.question}</Text>
@@ -167,6 +177,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#111',
     textAlign: 'center',
+  },
+  submittedBadge: {
+    backgroundColor: '#fce7f3',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  submittedBadgeText: {
+    color: '#9d174d',
+    fontSize: 14,
+    fontWeight: '600',
   },
   promptCard: {
     backgroundColor: '#fef2f2',

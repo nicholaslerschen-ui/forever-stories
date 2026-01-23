@@ -9,6 +9,13 @@ import MyStoriesScreen from '../screens/MyStoriesScreen';
 import StoryDetailScreen from '../screens/StoryDetailScreen';
 import AIChatScreen from '../screens/AIChatScreen';
 import FreeWriteScreen from '../screens/FreeWriteScreen';
+import AccountScreen from '../screens/AccountScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ManageFamilyScreen from '../screens/ManageFamilyScreen';
+import InviteFamilyScreen from '../screens/InviteFamilyScreen';
+import EditAccessScreen from '../screens/EditAccessScreen';
+import QuestionsScreen from '../screens/QuestionsScreen';
+import SubmitQuestionScreen from '../screens/SubmitQuestionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +36,13 @@ export default function AppNavigator() {
         <Stack.Screen name="StoryDetail" component={StoryDetailScreen} />
         <Stack.Screen name="AIChat" component={AIChatScreen} />
         <Stack.Screen name="FreeWrite" component={FreeWriteScreen} />
+        <Stack.Screen name="Account" component={AccountScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="ManageFamily" component={ManageFamilyScreen} />
+        <Stack.Screen name="InviteFamily" component={InviteFamilyScreen} />
+        <Stack.Screen name="EditAccess" component={EditAccessScreen} />
+        <Stack.Screen name="Questions" component={QuestionsScreen} />
+        <Stack.Screen name="SubmitQuestion" component={SubmitQuestionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

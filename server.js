@@ -253,6 +253,563 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
+// ACCOUNT MANAGEMENT
+// ============================================================================
+
+// Get full user account information
+app.get('/api/user/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Get user data and profile data with JOIN
+    const result = await pool.query(
+      `SELECT u.id, u.email, u.full_name, u.created_at,
+              p.birth_date, p.birth_location, p.life_events, p.interests,
+              p.timezone, p.additional_info
+       FROM users u
+       LEFT JOIN user_profiles p ON u.id = p.user_id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const account = result.rows[0];
+
+    // Parse JSON fields
+    if (account.life_events && typeof account.life_events === 'string') {
+      account.life_events = JSON.parse(account.life_events);
+    }
+    if (account.interests && typeof account.interests === 'string') {
+      account.interests = JSON.parse(account.interests);
+    }
+    if (account.additional_info && typeof account.additional_info === 'string') {
+      account.additional_info = JSON.parse(account.additional_info);
+    }
+
+    res.json({ account });
+  } catch (error) {
+    console.error('Get account error:', error);
+    res.status(500).json({ error: 'Failed to get account' });
+  }
+});
+
+// Update basic account information (name, email)
+app.put('/api/user/account/basic', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { fullName, email } = req.body;
+
+    // Check if email is being changed and if it's already taken
+    if (email) {
+      const emailCheck = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, userId]
+      );
+
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Email already in use' });
+      }
+    }
+
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (fullName !== undefined) {
+      updates.push(`full_name = $${paramCount}`);
+      values.push(fullName);
+      paramCount++;
+    }
+
+    if (email !== undefined) {
+      updates.push(`email = $${paramCount}`);
+      values.push(email);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(userId);
+
+    const query = `
+      UPDATE users
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING id, email, full_name
+    `;
+
+    const result = await pool.query(query, values);
+    res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Update basic info error:', error);
+    res.status(500).json({ error: 'Failed to update account' });
+  }
+});
+
+// Update password
+app.put('/api/user/account/password', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    // Get current password hash
+    const userResult = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, userId]
+    );
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Update password error:', error);
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// Update profile details
+app.put('/api/user/account/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { birthDate, birthLocation, timezone, lifeEvents, interests, additionalInfo } = req.body;
+
+    // Check if profile exists
+    const profileCheck = await pool.query(
+      'SELECT id FROM user_profiles WHERE user_id = $1',
+      [userId]
+    );
+
+    const profileExists = profileCheck.rows.length > 0;
+
+    if (profileExists) {
+      // Update existing profile
+      const updates = [];
+      const values = [];
+      let paramCount = 1;
+
+      if (birthDate !== undefined) {
+        updates.push(`birth_date = $${paramCount}`);
+        values.push(birthDate);
+        paramCount++;
+      }
+
+      if (birthLocation !== undefined) {
+        updates.push(`birth_location = $${paramCount}`);
+        values.push(birthLocation);
+        paramCount++;
+      }
+
+      if (timezone !== undefined) {
+        updates.push(`timezone = $${paramCount}`);
+        values.push(timezone);
+        paramCount++;
+      }
+
+      if (lifeEvents !== undefined) {
+        updates.push(`life_events = $${paramCount}`);
+        values.push(JSON.stringify(lifeEvents));
+        paramCount++;
+      }
+
+      if (interests !== undefined) {
+        updates.push(`interests = $${paramCount}`);
+        values.push(JSON.stringify(interests));
+        paramCount++;
+      }
+
+      if (additionalInfo !== undefined) {
+        updates.push(`additional_info = $${paramCount}`);
+        values.push(JSON.stringify(additionalInfo));
+        paramCount++;
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      updates.push(`updated_at = NOW()`);
+      values.push(userId);
+
+      const query = `
+        UPDATE user_profiles
+        SET ${updates.join(', ')}
+        WHERE user_id = $${paramCount}
+        RETURNING *
+      `;
+
+      const result = await pool.query(query, values);
+      res.json({ success: true, profile: result.rows[0] });
+    } else {
+      // Insert new profile
+      const result = await pool.query(
+        `INSERT INTO user_profiles (user_id, birth_date, birth_location, timezone, life_events, interests, additional_info)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+          userId,
+          birthDate || null,
+          birthLocation || null,
+          timezone || 'America/Phoenix',
+          JSON.stringify(lifeEvents || []),
+          JSON.stringify(interests || []),
+          JSON.stringify(additionalInfo || {})
+        ]
+      );
+
+      res.json({ success: true, profile: result.rows[0] });
+    }
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// ============================================================================
+// FAMILY/FRIENDS ACCESS MANAGEMENT
+// ============================================================================
+
+// Send invitation to family/friend
+app.post('/api/access/invite', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { recipientEmail, permissions } = req.body;
+
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+
+    if (!permissions || typeof permissions !== 'object') {
+      return res.status(400).json({ error: 'Permissions object required' });
+    }
+
+    // Check if invitation already exists
+    const existingGrant = await pool.query(
+      `SELECT id, is_active FROM access_grants
+       WHERE owner_id = $1 AND recipient_email = $2`,
+      [ownerId, recipientEmail]
+    );
+
+    if (existingGrant.rows.length > 0) {
+      const grant = existingGrant.rows[0];
+      if (grant.is_active) {
+        return res.status(400).json({ error: 'Access already granted to this email' });
+      }
+      // Reactivate existing grant
+      const result = await pool.query(
+        `UPDATE access_grants
+         SET permissions = $1, is_active = true, granted_at = NOW(), revoked_at = NULL
+         WHERE id = $2
+         RETURNING *`,
+        [JSON.stringify(permissions), grant.id]
+      );
+      return res.json({ success: true, grant: result.rows[0] });
+    }
+
+    // Check if recipient has an account
+    const recipientUser = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [recipientEmail]
+    );
+
+    const recipientUserId = recipientUser.rows[0]?.id || null;
+
+    // Create new access grant
+    const result = await pool.query(
+      `INSERT INTO access_grants (owner_id, recipient_email, recipient_user_id, access_level, permissions, is_active)
+       VALUES ($1, $2, $3, $4, $5, true)
+       RETURNING *`,
+      [ownerId, recipientEmail, recipientUserId, 'custom', JSON.stringify(permissions)]
+    );
+
+    res.json({
+      success: true,
+      grant: result.rows[0],
+      message: 'Invitation sent successfully'
+    });
+  } catch (error) {
+    console.error('Send invitation error:', error);
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
+});
+
+// Get all access grants (people you've granted access to)
+app.get('/api/access/grants', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT ag.id, ag.recipient_email, ag.permissions, ag.granted_at, ag.is_active,
+              u.full_name as recipient_name
+       FROM access_grants ag
+       LEFT JOIN users u ON ag.recipient_user_id = u.id
+       WHERE ag.owner_id = $1 AND ag.is_active = true
+       ORDER BY ag.granted_at DESC`,
+      [ownerId]
+    );
+
+    // Parse permissions JSON
+    const grants = result.rows.map(grant => ({
+      ...grant,
+      permissions: typeof grant.permissions === 'string'
+        ? JSON.parse(grant.permissions)
+        : grant.permissions
+    }));
+
+    res.json({ grants });
+  } catch (error) {
+    console.error('Get grants error:', error);
+    res.status(500).json({ error: 'Failed to get access grants' });
+  }
+});
+
+// Update permissions for existing grant
+app.put('/api/access/grant/:grantId', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { grantId } = req.params;
+    const { permissions } = req.body;
+
+    if (!permissions || typeof permissions !== 'object') {
+      return res.status(400).json({ error: 'Permissions object required' });
+    }
+
+    // Verify owner
+    const grantCheck = await pool.query(
+      'SELECT owner_id FROM access_grants WHERE id = $1',
+      [grantId]
+    );
+
+    if (grantCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Access grant not found' });
+    }
+
+    if (grantCheck.rows[0].owner_id !== ownerId) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Update permissions
+    const result = await pool.query(
+      `UPDATE access_grants
+       SET permissions = $1
+       WHERE id = $2
+       RETURNING *`,
+      [JSON.stringify(permissions), grantId]
+    );
+
+    res.json({ success: true, grant: result.rows[0] });
+  } catch (error) {
+    console.error('Update grant error:', error);
+    res.status(500).json({ error: 'Failed to update permissions' });
+  }
+});
+
+// Revoke access (soft delete)
+app.delete('/api/access/grant/:grantId', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { grantId } = req.params;
+
+    // Verify owner
+    const grantCheck = await pool.query(
+      'SELECT owner_id FROM access_grants WHERE id = $1',
+      [grantId]
+    );
+
+    if (grantCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Access grant not found' });
+    }
+
+    if (grantCheck.rows[0].owner_id !== ownerId) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Soft delete
+    await pool.query(
+      `UPDATE access_grants
+       SET is_active = false, revoked_at = NOW()
+       WHERE id = $1`,
+      [grantId]
+    );
+
+    res.json({ success: true, message: 'Access revoked successfully' });
+  } catch (error) {
+    console.error('Revoke access error:', error);
+    res.status(500).json({ error: 'Failed to revoke access' });
+  }
+});
+
+// Get accounts where current user has been granted access
+app.get('/api/access/my-access', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+
+    const result = await pool.query(
+      `SELECT ag.id, ag.owner_id, ag.permissions, ag.granted_at,
+              u.full_name as owner_name, u.email as owner_email
+       FROM access_grants ag
+       JOIN users u ON ag.owner_id = u.id
+       WHERE (ag.recipient_user_id = $1 OR ag.recipient_email = $2)
+         AND ag.is_active = true
+       ORDER BY ag.granted_at DESC`,
+      [userId, userEmail]
+    );
+
+    // Parse permissions JSON
+    const accessList = result.rows.map(access => ({
+      ...access,
+      permissions: typeof access.permissions === 'string'
+        ? JSON.parse(access.permissions)
+        : access.permissions
+    }));
+
+    res.json({ accessList });
+  } catch (error) {
+    console.error('Get my access error:', error);
+    res.status(500).json({ error: 'Failed to get access list' });
+  }
+});
+
+// ============================================================================
+// QUESTION SUBMISSION SYSTEM
+// ============================================================================
+
+// Submit question for story owner
+app.post('/api/questions/submit', authenticateToken, async (req, res) => {
+  try {
+    const submitterId = req.user.userId;
+    const submitterEmail = req.user.email;
+    const { ownerId, questionText } = req.body;
+
+    if (!ownerId || !questionText || !questionText.trim()) {
+      return res.status(400).json({ error: 'Owner ID and question text required' });
+    }
+
+    // Verify submitter has access grant with submitQuestions permission
+    const accessCheck = await pool.query(
+      `SELECT permissions FROM access_grants
+       WHERE owner_id = $1
+         AND (recipient_user_id = $2 OR recipient_email = $3)
+         AND is_active = true`,
+      [ownerId, submitterId, submitterEmail]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'No access to submit questions' });
+    }
+
+    const permissions = typeof accessCheck.rows[0].permissions === 'string'
+      ? JSON.parse(accessCheck.rows[0].permissions)
+      : accessCheck.rows[0].permissions;
+
+    if (!permissions.submitQuestions) {
+      return res.status(403).json({ error: 'Permission to submit questions not granted' });
+    }
+
+    // Insert question
+    const result = await pool.query(
+      `INSERT INTO submitted_questions (story_owner_id, submitter_user_id, submitter_email, question_text, status)
+       VALUES ($1, $2, $3, $4, 'pending')
+       RETURNING *`,
+      [ownerId, submitterId, submitterEmail, questionText.trim()]
+    );
+
+    res.json({
+      success: true,
+      question: result.rows[0],
+      message: 'Question submitted successfully'
+    });
+  } catch (error) {
+    console.error('Submit question error:', error);
+    res.status(500).json({ error: 'Failed to submit question' });
+  }
+});
+
+// Get questions submitted to current user
+app.get('/api/questions/submitted', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT sq.id, sq.question_text, sq.status, sq.created_at, sq.used_as_prompt_at,
+              sq.submitter_email, u.full_name as submitter_name
+       FROM submitted_questions sq
+       LEFT JOIN users u ON sq.submitter_user_id = u.id
+       WHERE sq.story_owner_id = $1
+       ORDER BY sq.created_at DESC`,
+      [ownerId]
+    );
+
+    res.json({ questions: result.rows });
+  } catch (error) {
+    console.error('Get submitted questions error:', error);
+    res.status(500).json({ error: 'Failed to get questions' });
+  }
+});
+
+// Delete/reject submitted question
+app.delete('/api/questions/:questionId', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { questionId } = req.params;
+
+    // Verify owner
+    const questionCheck = await pool.query(
+      'SELECT story_owner_id FROM submitted_questions WHERE id = $1',
+      [questionId]
+    );
+
+    if (questionCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    if (questionCheck.rows[0].story_owner_id !== ownerId) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Delete question
+    await pool.query('DELETE FROM submitted_questions WHERE id = $1', [questionId]);
+
+    res.json({ success: true, message: 'Question deleted successfully' });
+  } catch (error) {
+    console.error('Delete question error:', error);
+    res.status(500).json({ error: 'Failed to delete question' });
+  }
+});
+
+// ============================================================================
 // DAILY PROMPTS
 // ============================================================================
 
@@ -300,6 +857,45 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
       return res.json({
         answered: true,
         response: existingResponse.rows[0]
+      });
+    }
+
+    // Check for pending submitted questions from family/friends
+    const submittedQuestion = await pool.query(
+      `SELECT sq.*, u.full_name as submitter_name
+       FROM submitted_questions sq
+       LEFT JOIN users u ON sq.submitter_user_id = u.id
+       WHERE sq.story_owner_id = $1
+         AND sq.status = 'pending'
+       ORDER BY sq.created_at ASC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (submittedQuestion.rows.length > 0) {
+      const question = submittedQuestion.rows[0];
+
+      // Mark question as used
+      await pool.query(
+        `UPDATE submitted_questions
+         SET status = 'used', used_as_prompt_at = NOW()
+         WHERE id = $1`,
+        [question.id]
+      );
+
+      return res.json({
+        answered: false,
+        prompt: {
+          id: null,
+          question: question.question_text,
+          category: 'family_question',
+          type: 'submitted',
+          submittedQuestionId: question.id,
+          submitterInfo: {
+            name: question.submitter_name,
+            email: question.submitter_email
+          }
+        }
       });
     }
 
@@ -470,7 +1066,7 @@ app.get('/api/prompts/next', authenticateToken, async (req, res) => {
 // Submit prompt response
 app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
   try {
-    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title } = req.body;
+    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title, submittedQuestionId } = req.body;
     const userId = req.user.userId;
 
     if (!response || response.trim().length === 0) {
@@ -486,7 +1082,7 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 
       if (existingResponse.rows.length > 0) {
         const updatedResponse = existingResponse.rows[0].response_text + '\n\n' + response;
-        
+
         await pool.query(
           'UPDATE prompt_responses SET response_text = $1 WHERE id = $2',
           [updatedResponse, parentResponseId]
@@ -499,16 +1095,24 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
       }
     }
 
-    // Determine response type
+    // Determine response type and get prompt text
     let responseType = 'daily';
-    if (isFreeWrite) {
+    let promptText = '';
+
+    if (submittedQuestionId) {
+      // Responding to submitted question from family/friend
+      responseType = 'submitted';
+      const questionResult = await pool.query(
+        'SELECT question_text FROM submitted_questions WHERE id = $1',
+        [submittedQuestionId]
+      );
+      promptText = questionResult.rows[0]?.question_text || 'Family Question';
+    } else if (isFreeWrite) {
       responseType = 'freewrite';
+      promptText = title || 'My Story';
     } else if (isBonus) {
       responseType = 'bonus';
     }
-
-    // For free-write, use title as prompt_text, promptId can be null
-    const promptText = isFreeWrite ? (title || 'My Story') : '';
 
     // Save initial response
     const result = await pool.query(

@@ -153,6 +153,24 @@ CREATE INDEX idx_access_grants_recipient_email ON access_grants(recipient_email)
 CREATE INDEX idx_access_grants_recipient_user_id ON access_grants(recipient_user_id);
 
 -- ============================================================================
+-- SUBMITTED QUESTIONS TABLE (Family/Friend Questions for Story Owner)
+-- ============================================================================
+CREATE TABLE submitted_questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    story_owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    submitter_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    submitter_email VARCHAR(255),
+    question_text TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending', -- pending, used, rejected
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    used_as_prompt_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_submitted_questions_owner ON submitted_questions(story_owner_id);
+CREATE INDEX idx_submitted_questions_status ON submitted_questions(status);
+CREATE INDEX idx_submitted_questions_created ON submitted_questions(created_at DESC);
+
+-- ============================================================================
 -- PERSONA EMBEDDINGS TABLE (Vector Search for Semantic Similarity)
 -- ============================================================================
 -- Requires pgvector extension
@@ -263,6 +281,7 @@ ALTER TABLE prompt_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE persona_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE access_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE submitted_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE persona_embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
@@ -295,6 +314,10 @@ CREATE POLICY user_achievements_policy ON user_achievements
 -- Access grants: users can see grants they created or received
 CREATE POLICY access_grants_owner_policy ON access_grants
     FOR ALL USING (owner_id = auth.uid() OR recipient_user_id = auth.uid());
+
+-- Submitted questions: users can see questions submitted to them or by them
+CREATE POLICY submitted_questions_owner_policy ON submitted_questions
+    FOR ALL USING (story_owner_id = auth.uid() OR submitter_user_id = auth.uid());
 
 -- ============================================================================
 -- FUNCTIONS AND TRIGGERS
@@ -393,6 +416,7 @@ COMMENT ON TABLE prompt_responses IS 'User responses to daily prompts';
 COMMENT ON TABLE user_stats IS 'Gamification stats: streaks, points, achievements';
 COMMENT ON TABLE persona_conversations IS 'Chat history with AI persona';
 COMMENT ON TABLE access_grants IS 'Family/friend access permissions';
+COMMENT ON TABLE submitted_questions IS 'Questions submitted by family/friends for story owner';
 COMMENT ON TABLE persona_embeddings IS 'Vector embeddings for semantic search';
 COMMENT ON TABLE achievements IS 'Available achievements and badges';
 COMMENT ON TABLE user_achievements IS 'User-unlocked achievements';
