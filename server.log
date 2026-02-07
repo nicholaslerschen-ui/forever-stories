@@ -1,0 +1,14 @@
+⚠️  Email service not configured (EMAIL_USER/EMAIL_PASSWORD missing)
+⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
+📊 Using PostgreSQL database
+
+🎉 Forever Stories API Server
+================================
+🚀 Server running on port 3001
+📝 Environment: development
+🔗 Health check: http://localhost:3001/health
+📅 Daily Prompts: ENABLED
+🤖 AI Persona: ENABLED
+================================
+
+✅ Database connected successfully

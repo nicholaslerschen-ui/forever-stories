@@ -1,0 +1,10 @@
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:8FC1E923-A66A-4B9D-ADAB-53246FB79AF3, OS:18.4, name:iPhone 16e }
+{ platform:iOS Simulator, arch:x86_64, id:8FC1E923-A66A-4B9D-ADAB-53246FB79AF3, OS:18.4, name:iPhone 16e }
+** BUILD FAILED **
+
+
+The following build commands failed:
+	CompileC /Users/admin/Library/Developer/Xcode/DerivedData/ForeverStoriesMobile-bqmozfwvdnbsmpdycjedjcjjpdbx/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/ExpoModulesCore.build/Objects-normal/arm64/EXJavaScriptWeakObject.o /Users/admin/Desktop/forever-stories/mobile/node_modules/expo-modules-core/ios/JSI/EXJavaScriptWeakObject.mm normal arm64 objective-c++ com.apple.compilers.llvm.clang.1_0.compiler (in target 'ExpoModulesCore' from project 'Pods')
+	Building workspace ForeverStoriesMobile with scheme ForeverStoriesMobile and configuration Debug
+(2 failures)

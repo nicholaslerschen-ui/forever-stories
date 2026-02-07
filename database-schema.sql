@@ -31,6 +31,7 @@ CREATE TABLE user_profiles (
     life_events JSONB DEFAULT '[]',
     interests JSONB DEFAULT '[]',
     additional_info JSONB DEFAULT '{}',
+    timezone VARCHAR(100) DEFAULT 'America/Phoenix',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id)
@@ -95,6 +96,21 @@ CREATE TABLE prompt_responses (
 CREATE INDEX idx_prompt_responses_user_id ON prompt_responses(user_id);
 CREATE INDEX idx_prompt_responses_created_at ON prompt_responses(created_at DESC);
 CREATE INDEX idx_prompt_responses_prompt_id ON prompt_responses(prompt_id);
+
+-- ============================================================================
+-- RESPONSE FILES TABLE (Links media files to prompt responses)
+-- ============================================================================
+CREATE TABLE response_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    response_id UUID REFERENCES prompt_responses(id) ON DELETE CASCADE,
+    file_id UUID REFERENCES user_files(id) ON DELETE CASCADE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(response_id, file_id)
+);
+
+CREATE INDEX idx_response_files_response ON response_files(response_id);
+CREATE INDEX idx_response_files_file ON response_files(file_id);
 
 -- ============================================================================
 -- USER STATS TABLE (Gamification)
@@ -278,6 +294,7 @@ INSERT INTO achievements (name, description, icon, points_reward, criteria, rari
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prompt_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE response_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE persona_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE access_grants ENABLE ROW LEVEL SECURITY;
@@ -295,6 +312,15 @@ CREATE POLICY user_files_policy ON user_files
 
 CREATE POLICY prompt_responses_policy ON prompt_responses
     FOR ALL USING (user_id = auth.uid());
+
+CREATE POLICY response_files_policy ON response_files
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM prompt_responses pr
+            WHERE pr.id = response_files.response_id
+            AND pr.user_id = auth.uid()
+        )
+    );
 
 CREATE POLICY user_stats_policy ON user_stats
     FOR ALL USING (user_id = auth.uid());
@@ -413,6 +439,7 @@ COMMENT ON TABLE user_profiles IS 'Extended user profile information from intake
 COMMENT ON TABLE user_files IS 'Uploaded documents, photos, letters, journals';
 COMMENT ON TABLE prompts IS 'Daily prompts and questions for users';
 COMMENT ON TABLE prompt_responses IS 'User responses to daily prompts';
+COMMENT ON TABLE response_files IS 'Junction table linking media files to prompt responses';
 COMMENT ON TABLE user_stats IS 'Gamification stats: streaks, points, achievements';
 COMMENT ON TABLE persona_conversations IS 'Chat history with AI persona';
 COMMENT ON TABLE access_grants IS 'Family/friend access permissions';

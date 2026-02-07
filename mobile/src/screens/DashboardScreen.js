@@ -8,68 +8,367 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import ApiService from '../services/api';
+import OwnerSwitcher from '../components/OwnerSwitcher';
+// import PushNotificationService from '../services/PushNotificationService'; // Temporarily disabled - RN 0.83.1 build incompatible with Xcode 16.4
+import NotificationPermissionModal from '../components/NotificationPermissionModal';
 
 export default function DashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dailyPromptCompleted, setDailyPromptCompleted] = useState(false);
+  const [pendingQuestionsCount, setPendingQuestionsCount] = useState(0);
+
+  // Viewer multi-owner support
+  const [currentOwner, setCurrentOwner] = useState(null);
+  const [showOwnerSwitcher, setShowOwnerSwitcher] = useState(false);
+
+  // Notification permission modal
+  // TESTING: Set to true to force show modal on every load
+  const FORCE_SHOW_MODAL_FOR_TESTING = false;
+  const [showNotificationModal, setShowNotificationModal] = useState(FORCE_SHOW_MODAL_FOR_TESTING);
+
+  useEffect(() => {
+    console.log('🔔 Notification modal visibility changed:', showNotificationModal);
+  }, [showNotificationModal]);
 
   useEffect(() => {
     loadUserData();
+    loadPendingQuestions();
+    loadCurrentOwner();
   }, []);
 
+  // Check for first visit after loading is complete and user is loaded
+  useEffect(() => {
+    console.log('📊 Loading state:', loading, 'User loaded:', !!user);
+    if (!loading && user) {
+      console.log('📊 Dashboard finished loading, checking first visit...');
+      checkFirstVisit();
+    }
+  }, [loading, user]);
+
+  const checkFirstVisit = async () => {
+    console.log('🔔 checkFirstVisit: Starting...');
+
+    if (!user || !user.id) {
+      console.log('⚠️ User not loaded yet, skipping notification check');
+      return;
+    }
+
+    try {
+      // Make the key user-specific so each account gets asked
+      const storageKey = `notificationPermissionAsked_${user.id}`;
+      const hasAskedForNotifications = await AsyncStorage.getItem(storageKey);
+      console.log('🔔 Notification permission asked before?', hasAskedForNotifications);
+      console.log('🔔 Storage key:', storageKey);
+
+      if (!hasAskedForNotifications) {
+        console.log('🔔 Will show notification modal in 1 second...');
+        // Show modal after a short delay to let dashboard load
+        setTimeout(() => {
+          console.log('🔔 Timeout fired! Setting showNotificationModal to TRUE');
+          setShowNotificationModal(true);
+          console.log('🔔 setShowNotificationModal(true) called');
+        }, 1000);
+      } else {
+        console.log('🔔 User already made choice, initializing push notifications');
+        // If they already made a choice, initialize notifications
+        initializePushNotifications();
+      }
+    } catch (error) {
+      console.error('❌ Failed to check first visit:', error);
+    }
+  };
+
+  const initializePushNotifications = async () => {
+    // Temporarily disabled - RN 0.83.1 build incompatible with Xcode 16.4
+    console.log('⚠️ Push notification initialization disabled (build compatibility issue)');
+    /*
+    try {
+      // Initialize push notifications
+      await PushNotificationService.initialize();
+      console.log('✅ Push notifications initialized');
+    } catch (error) {
+      console.error('Failed to initialize push notifications:', error);
+    }
+    */
+  };
+
+  const handleAcceptNotifications = async () => {
+    console.log('✅ User accepted notifications');
+    setShowNotificationModal(false);
+
+    if (user && user.id) {
+      // Use user-specific storage key
+      await AsyncStorage.setItem(`notificationPermissionAsked_${user.id}`, 'true');
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      // Enable all notifications in backend
+      await ApiService.updateNotificationPreferences(token, {
+        notifications_enabled: true,
+      });
+
+      // Initialize push notifications and request permission
+      await initializePushNotifications();
+
+      // Note: Alert temporarily disabled until native rebuild
+      console.log('✅ Notification preferences saved (native push will work after app rebuild)');
+      /*
+      Alert.alert(
+        'Notifications Enabled',
+        'You\'ll now receive helpful reminders and updates!'
+      );
+      */
+    } catch (error) {
+      console.error('❌ Failed to enable notifications:', error);
+      // Don't show error to user during temp state
+      // Alert.alert('Error', 'Failed to enable notifications. You can enable them later in settings.');
+    }
+  };
+
+  const handleDeclineNotifications = async () => {
+    console.log('❌ User declined notifications');
+    setShowNotificationModal(false);
+
+    if (user && user.id) {
+      // Use user-specific storage key
+      await AsyncStorage.setItem(`notificationPermissionAsked_${user.id}`, 'true');
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      // Disable notifications in backend
+      await ApiService.updateNotificationPreferences(token, {
+        notifications_enabled: false,
+      });
+    } catch (error) {
+      console.error('❌ Failed to save notification preference:', error);
+    }
+  };
+
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+      loadPendingQuestions();
+      loadCurrentOwner();
+    }, [])
+  );
+
   const loadUserData = async () => {
+    console.log('📊 loadUserData: Starting...');
     try {
       const token = await AsyncStorage.getItem('authToken');
       const userData = await AsyncStorage.getItem('user');
       const statsData = await ApiService.getUserStats(token);
-      
-      setUser(JSON.parse(userData));
+
+      const parsedUser = JSON.parse(userData);
+      console.log('📊 loadUserData: User loaded -', parsedUser?.email, 'role:', parsedUser?.role);
+      setUser(parsedUser);
       setStats(statsData.stats);
+
+      // Only check daily prompt status for owner accounts
+      if (parsedUser?.role === 'owner') {
+        console.log('📊 loadUserData: Checking daily prompt status...');
+        await checkDailyPromptStatus(); // Wait for this to complete
+      }
+      console.log('📊 loadUserData: Complete, setting loading to false');
     } catch (error) {
+      console.error('❌ loadUserData error:', error);
       Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
+      console.log('📊 loadUserData: Finally block - loading set to false');
+    }
+  };
+
+  const checkDailyPromptStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const data = await ApiService.getTodayPrompt(token);
+
+      // Check if today's daily prompt has been answered
+      setDailyPromptCompleted(data.alreadyAnswered || data.answered || data.promptAnswered || false);
+    } catch (error) {
+      console.error('Failed to check daily prompt status:', error);
+    }
+  };
+
+  const loadPendingQuestions = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const data = await ApiService.getPendingQuestionsCount(token);
+      setPendingQuestionsCount(data.count || 0);
+    } catch (error) {
+      console.error('Failed to load pending questions:', error);
+    }
+  };
+
+  const loadCurrentOwner = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+
+      // Only load owner info if user is a viewer
+      if (parsedUser?.role === 'viewer') {
+        const currentOwnerId = await AsyncStorage.getItem('currentOwnerId');
+
+        if (currentOwnerId) {
+          const token = await AsyncStorage.getItem('authToken');
+          const data = await ApiService.getMyOwners(token);
+          const owner = data.owners.find(o => o.owner_id === currentOwnerId);
+          setCurrentOwner(owner);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load current owner:', error);
+    }
+  };
+
+  const handleOwnerSelect = async (ownerId) => {
+    // Reload data for the newly selected owner
+    await loadCurrentOwner();
+    // Refresh all data (loadUserData will handle prompt check if user is owner)
+    await loadUserData();
+  };
+
+  const handleAnswerPrompt = () => {
+    if (dailyPromptCompleted) {
+      // Load next weighted prompt
+      navigation.navigate('DailyPrompt', { mode: 'another' });
+    } else {
+      // Load today's daily prompt
+      navigation.navigate('DailyPrompt', { mode: 'daily' });
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#e11d48" />
-      </View>
+      <>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#e11d48" />
+        </View>
+
+        {/* Render modal even during loading */}
+        <NotificationPermissionModal
+          visible={showNotificationModal}
+          onAccept={handleAcceptNotifications}
+          onDecline={handleDeclineNotifications}
+        />
+      </>
     );
   }
+
+  const isViewer = user?.role === 'viewer';
 
   return (
     <View style={styles.container}>
       <Text style={styles.welcome}>Welcome back, {user?.fullName?.split(' ')[0]}! 👋</Text>
-      
+
+      {/* Owner Switcher for Viewers */}
+      {isViewer && (
+        <TouchableOpacity
+          style={styles.ownerSwitcherButton}
+          onPress={() => setShowOwnerSwitcher(true)}
+        >
+          <Text style={styles.ownerSwitcherLabel}>Viewing stories from:</Text>
+          <Text style={styles.ownerSwitcherName}>
+            {currentOwner ? currentOwner.owner_name : 'Select Owner'} ▼
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Owner Stats - Only show for owners */}
+      {!isViewer && (
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{stats?.currentStreak || 0}</Text>
           <Text style={styles.statLabel}>Day Streak 🔥</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{stats?.totalResponses || 0}</Text>
           <Text style={styles.statLabel}>Stories 📖</Text>
         </View>
       </View>
+      )}
 
-      <TouchableOpacity
-        style={styles.promptButton}
-        onPress={() => navigation.navigate('DailyPrompt')}
-      >
-        <Text style={styles.promptButtonText}>📝 Answer Today's Prompt</Text>
-      </TouchableOpacity>
+      {/* Family Questions Card - Only show for owners */}
+      {!isViewer && pendingQuestionsCount > 0 && (
+        <TouchableOpacity
+          style={styles.familyQuestionsCard}
+          onPress={() => navigation.navigate('FamilyQuestions')}
+        >
+          <Text style={styles.familyQuestionsTitle}>
+            📬 Questions from Family ({pendingQuestionsCount})
+          </Text>
+          <Text style={styles.familyQuestionsSubtitle}>
+            Your family has submitted questions for you to answer
+          </Text>
+        </TouchableOpacity>
+      )}
 
+      {/* Owner-specific buttons */}
+      {!isViewer && (
+        <>
+          <TouchableOpacity
+            style={styles.promptButton}
+            onPress={handleAnswerPrompt}
+          >
+            <Text style={styles.promptButtonText}>
+              {dailyPromptCompleted ? '📝 Answer Another Prompt' : '📝 Answer Today\'s Prompt'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.freeWriteButton}
+            onPress={() => navigation.navigate('FreeWrite')}
+          >
+            <Text style={styles.freeWriteButtonText}>✍️ Free Write</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* Viewer-specific buttons */}
+      {isViewer && !currentOwner && (
+        <View style={styles.noOwnerCard}>
+          <Text style={styles.noOwnerTitle}>👋 Welcome!</Text>
+          <Text style={styles.noOwnerText}>
+            To get started, you'll need to accept an invite from the person whose stories you want to view.
+          </Text>
+          <TouchableOpacity
+            style={styles.acceptInviteButton}
+            onPress={() => navigation.navigate('AcceptInvite')}
+          >
+            <Text style={styles.acceptInviteButtonText}>✉️ Accept Invite</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isViewer && currentOwner && (
+        <TouchableOpacity
+          style={styles.promptButton}
+          onPress={() => navigation.navigate('SubmitQuestion', {
+            ownerId: currentOwner?.owner_id,
+            ownerName: currentOwner?.owner_name
+          })}
+        >
+          <Text style={styles.promptButtonText}>💬 Submit a Question</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Shared buttons */}
       <TouchableOpacity
         style={styles.storiesButton}
         onPress={() => navigation.navigate('MyStories')}
       >
-        <Text style={styles.storiesButtonText}>📖 My Stories ({stats?.totalResponses || 0})</Text>
+        <Text style={styles.storiesButtonText}>
+          📖 {isViewer ? `${currentOwner?.owner_name || 'Owner'}'s Stories` : `My Stories (${stats?.totalResponses || 0})`}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -80,18 +379,48 @@ export default function DashboardScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.freeWriteButton}
-        onPress={() => navigation.navigate('FreeWrite')}
-      >
-        <Text style={styles.freeWriteButtonText}>✍️ Free Write</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
         style={styles.accountButton}
         onPress={() => navigation.navigate('Account')}
       >
         <Text style={styles.accountButtonText}>⚙️ Account Settings</Text>
       </TouchableOpacity>
+
+      {/* DEBUG: Test notification modal */}
+      <TouchableOpacity
+        style={[styles.accountButton, { backgroundColor: '#f97316', marginTop: 10 }]}
+        onPress={() => {
+          console.log('🧪 DEBUG: Manually showing notification modal');
+          setShowNotificationModal(true);
+        }}
+      >
+        <Text style={styles.accountButtonText}>🧪 Test Notification Modal</Text>
+      </TouchableOpacity>
+
+      {/* DEBUG: Reset notification permission */}
+      <TouchableOpacity
+        style={[styles.accountButton, { backgroundColor: '#8b5cf6', marginTop: 10 }]}
+        onPress={async () => {
+          console.log('🧪 DEBUG: Clearing notification permission flag');
+          await AsyncStorage.removeItem('notificationPermissionAsked');
+          Alert.alert('Reset', 'Notification permission flag cleared. Restart app to see modal.');
+        }}
+      >
+        <Text style={styles.accountButtonText}>🔄 Reset Permission Flag</Text>
+      </TouchableOpacity>
+
+      {/* Owner Switcher Modal */}
+      <OwnerSwitcher
+        visible={showOwnerSwitcher}
+        onClose={() => setShowOwnerSwitcher(false)}
+        onSelectOwner={handleOwnerSelect}
+      />
+
+      {/* Notification Permission Modal */}
+      <NotificationPermissionModal
+        visible={showNotificationModal}
+        onAccept={handleAcceptNotifications}
+        onDecline={handleDeclineNotifications}
+      />
     </View>
   );
 }
@@ -111,7 +440,25 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 60,
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  ownerSwitcherButton: {
+    backgroundColor: '#f3f4f6',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  ownerSwitcherLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  ownerSwitcherName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -135,6 +482,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 5,
+  },
+  familyQuestionsCard: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  familyQuestionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  familyQuestionsSubtitle: {
+    fontSize: 14,
+    color: '#78350f',
+  },
+  noOwnerCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    padding: 24,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  noOwnerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#111',
+  },
+  noOwnerText: {
+    fontSize: 15,
+    color: '#1e40af',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  acceptInviteButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+  },
+  acceptInviteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   promptButton: {
     backgroundColor: '#e11d48',

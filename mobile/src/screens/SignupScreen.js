@@ -16,6 +16,8 @@ export default function SignupScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState('owner'); // Default to owner
+  const [inviteCode, setInviteCode] = useState(''); // For reverse invites
 
   const handleSignup = async () => {
     if (!email || !password || !fullName) {
@@ -25,10 +27,25 @@ export default function SignupScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const response = await ApiService.signup(email, password, fullName);
+      const response = await ApiService.signup(email, password, fullName, role, inviteCode.trim() || null);
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
-      navigation.replace('Dashboard');
+
+      // If owner used reverse invite code, auto-connect was handled by backend
+      if (response.reverseInviteUsed) {
+        Alert.alert(
+          '🎉 Connection Established!',
+          `Great news! ${response.viewerName} will now have access to view your stories once you start sharing them.\n\nYou can manage their access anytime from your account settings.`,
+          [{ text: 'Continue', onPress: () => navigation.replace('Onboarding') }]
+        );
+      } else {
+        // Viewers get option to invite their parent, owners go through onboarding
+        if (role === 'viewer') {
+          navigation.replace('InviteParent');
+        } else {
+          navigation.replace('Onboarding');
+        }
+      }
     } catch (error) {
       Alert.alert('Signup Failed', error.message);
     } finally {
@@ -39,7 +56,55 @@ export default function SignupScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Start preserving your legacy</Text>
+      <Text style={styles.subtitle}>Who is this account for?</Text>
+
+      {/* Role Selection */}
+      <View style={styles.roleContainer}>
+        <TouchableOpacity
+          style={[styles.roleCard, role === 'owner' && styles.roleCardActive]}
+          onPress={() => setRole('owner')}
+        >
+          <Text style={styles.roleIcon}>📖</Text>
+          <Text style={[styles.roleTitle, role === 'owner' && styles.roleTitleActive]}>
+            For Myself
+          </Text>
+          <Text style={styles.roleDescription}>
+            I want to preserve my own stories and memories
+          </Text>
+          {role === 'owner' && <Text style={styles.checkmark}>✓</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.roleCard, role === 'viewer' && styles.roleCardActive]}
+          onPress={() => setRole('viewer')}
+        >
+          <Text style={styles.roleIcon}>👨‍👩‍👧‍👦</Text>
+          <Text style={[styles.roleTitle, role === 'viewer' && styles.roleTitleActive]}>
+            I'm a Family Member
+          </Text>
+          <Text style={styles.roleDescription}>
+            I'm viewing someone else's stories
+          </Text>
+          {role === 'viewer' && <Text style={styles.checkmark}>✓</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {/* Invite Code for Owners (Optional) */}
+      {role === 'owner' && (
+        <View style={styles.inviteCodeSection}>
+          <Text style={styles.inviteCodeLabel}>
+            Have an invite code from a family member? (Optional)
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter 8-character code"
+            value={inviteCode}
+            onChangeText={(text) => setInviteCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={8}
+          />
+        </View>
+      )}
 
       <TextInput
         style={styles.input}
@@ -101,8 +166,49 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     color: '#666',
+  },
+  roleContainer: {
+    marginBottom: 30,
+  },
+  roleCard: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    position: 'relative',
+  },
+  roleCardActive: {
+    borderColor: '#e11d48',
+    backgroundColor: '#fef2f2',
+  },
+  roleIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  roleTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: '#111',
+  },
+  roleTitleActive: {
+    color: '#e11d48',
+  },
+  roleDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  checkmark: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    fontSize: 24,
+    color: '#e11d48',
   },
   input: {
     borderWidth: 1,
@@ -128,5 +234,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#e11d48',
     marginTop: 20,
+  },
+  inviteCodeSection: {
+    marginBottom: 20,
+  },
+  inviteCodeLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
   },
 });

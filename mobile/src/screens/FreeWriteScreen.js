@@ -11,11 +11,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import MediaPicker from '../components/MediaPicker';
 
 export default function FreeWriteScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [story, setStory] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const submitStory = async () => {
     if (!story.trim()) {
@@ -26,8 +29,19 @@ export default function FreeWriteScreen({ navigation }) {
     setSubmitting(true);
     try {
       const token = await AsyncStorage.getItem('authToken');
-      await ApiService.submitFreeWrite(token, title || 'Untitled Story', story);
-      
+
+      let fileIds = null;
+
+      // Upload files first if any selected
+      if (selectedMedia.length > 0) {
+        setUploading(true);
+        const uploadResult = await ApiService.uploadFiles(token, selectedMedia);
+        fileIds = uploadResult.files.map(f => f.id);
+        setUploading(false);
+      }
+
+      await ApiService.submitFreeWrite(token, title || 'Untitled Story', story, fileIds);
+
       Alert.alert('Success!', 'Your story has been saved!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -35,6 +49,7 @@ export default function FreeWriteScreen({ navigation }) {
       Alert.alert('Error', error.message);
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -49,6 +64,11 @@ export default function FreeWriteScreen({ navigation }) {
 
       <Text style={styles.title}>Free Write</Text>
       <Text style={styles.subtitle}>Write about anything on your mind</Text>
+
+      <MediaPicker
+        selectedMedia={selectedMedia}
+        onMediaChange={setSelectedMedia}
+      />
 
       <Text style={styles.label}>Title (optional)</Text>
       <TextInput
@@ -72,14 +92,16 @@ export default function FreeWriteScreen({ navigation }) {
       <Text style={styles.charCount}>{story.length} characters</Text>
 
       <TouchableOpacity
-        style={[styles.button, submitting && styles.buttonDisabled]}
+        style={[styles.button, (submitting || uploading) && styles.buttonDisabled]}
         onPress={submitStory}
-        disabled={submitting}
+        disabled={submitting || uploading}
       >
-        {submitting ? (
+        {submitting || uploading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Save Story</Text>
+          <Text style={styles.buttonText}>
+            {uploading ? 'Uploading media...' : submitting ? 'Saving...' : 'Save Story'}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>

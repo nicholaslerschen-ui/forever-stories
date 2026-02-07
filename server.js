@@ -4,7 +4,240 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
+const multer = require('multer');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const twilio = require('twilio');
 require('dotenv').config();
+
+// Import prompt selection engine
+const { getNextPrompt, onSkip, onRating, RATING, SKIP_REASON, SELECTION_MODE } = require('./promptSelectionEngine');
+
+// Import push notification service
+const {
+  sendFamilyQuestionNotification,
+  sendResponseReceivedNotification,
+  sendInviteNotification,
+  sendDailyPromptReminders,
+  resetNotificationCooldown
+} = require('./pushNotificationService');
+
+// AWS S3 Configuration
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+
+const S3_BUCKET = process.env.AWS_S3_BUCKET || 'forever-stories-uploads';
+
+// Multer configuration - store in memory for S3 upload
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB
+    files: 10  // Max 10 files per request
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images and videos
+    const allowedMimes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/heic',
+      'video/mp4', 'video/quicktime', 'video/mov'
+    ];
+
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPG, PNG, HEIC, MP4, MOV allowed.'));
+    }
+  }
+});
+
+// S3 Upload Helper Function
+async function uploadToS3(file, userId) {
+  const fileExtension = file.originalname.split('.').pop();
+  const fileName = `${userId}/${crypto.randomBytes(16).toString('hex')}.${fileExtension}`;
+
+  const command = new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: fileName,
+    Body: file.buffer,
+    ContentType: file.mimetype
+    // No ACL - files are private by default
+  });
+
+  await s3Client.send(command);
+
+  // Return the S3 key (not the URL, we'll generate signed URLs when needed)
+  return fileName;
+}
+
+// Generate a signed URL for private S3 objects (valid for 1 hour)
+async function getSignedFileUrl(s3Key) {
+  const command = new GetObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: s3Key
+  });
+
+  // URL expires in 1 hour (3600 seconds)
+  return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}
+
+// ============================================================================
+// EMAIL CONFIGURATION & HELPERS
+// ============================================================================
+
+// Email transporter configuration (using Gmail for development)
+let emailTransporter = null;
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  emailTransporter = nodemailer.createTransport({
+    service: process.env.EMAIL_SERVICE || 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+  console.log('✉️  Email service configured');
+} else {
+  console.log('⚠️  Email service not configured (EMAIL_USER/EMAIL_PASSWORD missing)');
+}
+
+// Twilio SMS client configuration
+let twilioClient = null;
+
+// Only initialize Twilio if credentials are configured AND valid (SID starts with 'AC')
+if (
+  process.env.TWILIO_ACCOUNT_SID &&
+  process.env.TWILIO_ACCOUNT_SID.startsWith('AC') &&
+  process.env.TWILIO_AUTH_TOKEN &&
+  process.env.TWILIO_PHONE_NUMBER
+) {
+  twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  console.log('📱 SMS service configured (Twilio)');
+} else {
+  console.log('⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)');
+}
+
+// Helper: Generate unique 8-character invite code
+function generateInviteCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Helper: Send invite email
+async function sendInviteEmail(recipientEmail, inviteCode, ownerName) {
+  if (!emailTransporter) {
+    console.log('📧 Email not configured, skipping email send (invite code:', inviteCode, ')');
+    return;
+  }
+
+  const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/accept-invite/${inviteCode}`;
+
+  const mailOptions = {
+    from: `Forever Stories <${process.env.EMAIL_USER}>`,
+    to: recipientEmail,
+    subject: `${ownerName} has invited you to Forever Stories`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>You've been invited to Forever Stories</h2>
+        <p>${ownerName} has invited you to view their stories and ask questions.</p>
+        <p>Click the link below to accept the invitation:</p>
+        <a href="${inviteUrl}" style="display: inline-block; padding: 12px 24px; background-color: #e11d48; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0;">
+          Accept Invitation
+        </a>
+        <p>Or enter this code in the app: <strong>${inviteCode}</strong></p>
+        <p style="color: #666; font-size: 14px;">This invitation expires in 30 days.</p>
+      </div>
+    `
+  };
+
+  await emailTransporter.sendMail(mailOptions);
+  console.log('📧 Invite email sent to:', recipientEmail);
+}
+
+// Helper: Send invite SMS
+async function sendInviteSMS(recipientPhone, inviteCode, ownerName) {
+  if (!twilioClient) {
+    console.log('📱 SMS not configured, skipping SMS send (invite code:', inviteCode, ')');
+    return;
+  }
+
+  const message = `${ownerName} has invited you to Forever Stories!\n\nYour invite code: ${inviteCode}\n\nDownload the app and enter this code to view their stories and ask questions.\n\nExpires in 30 days.`;
+
+  await twilioClient.messages.create({
+    body: message,
+    from: process.env.TWILIO_PHONE_NUMBER,
+    to: recipientPhone
+  });
+
+  console.log('📱 Invite SMS sent to:', recipientPhone);
+}
+
+// Helper: Send reverse invite email (viewer inviting story owner)
+async function sendReverseInviteEmail(recipientEmail, inviteCode, viewerName) {
+  if (!emailTransporter) {
+    console.log('📧 Email not configured, skipping reverse invite email send (code:', inviteCode, ')');
+    return;
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || 'noreply@foreverstories.app',
+    to: recipientEmail,
+    subject: `${viewerName} wants to connect with you on Forever Stories`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #e11d48;">You've been invited to Forever Stories</h2>
+        <p><strong>${viewerName}</strong> wants to hear your stories and memories!</p>
+        <p>They've invited you to join Forever Stories, where you can preserve your life stories and share them with family.</p>
+
+        <div style="background-color: #fef2f2; border-left: 4px solid #e11d48; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #666;">Your invite code:</p>
+          <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold; color: #e11d48; letter-spacing: 2px;">${inviteCode}</p>
+        </div>
+
+        <p><strong>How to get started:</strong></p>
+        <ol>
+          <li>Download the Forever Stories app</li>
+          <li>Create your account and select "For Myself"</li>
+          <li>Enter this invite code when prompted</li>
+          <li>Start sharing your stories with ${viewerName}!</li>
+        </ol>
+
+        <p style="color: #666; font-size: 14px; margin-top: 30px;">This invite code expires in 30 days.</p>
+      </div>
+    `
+  };
+
+  await emailTransporter.sendMail(mailOptions);
+  console.log('📧 Reverse invite email sent to:', recipientEmail);
+}
+
+// Helper: Send reverse invite SMS (viewer inviting story owner)
+async function sendReverseInviteSMS(recipientPhone, inviteCode, viewerName) {
+  if (!twilioClient) {
+    console.log('📱 SMS not configured, skipping reverse invite SMS send (code:', inviteCode, ')');
+    return;
+  }
+
+  const message = `${viewerName} wants to hear your stories!\n\nThey've invited you to Forever Stories. Download the app, create your account, and use this code:\n\n${inviteCode}\n\nThis connects you so ${viewerName} can read your life stories.\n\nExpires in 30 days.`;
+
+  await twilioClient.messages.create({
+    body: message,
+    from: process.env.TWILIO_PHONE_NUMBER,
+    to: recipientPhone
+  });
+
+  console.log('📱 Reverse invite SMS sent to:', recipientPhone);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -79,9 +312,12 @@ app.get('/health', async (req, res) => {
 // ============================================================================
 
 // Register new user
-app.post('/api/auth/register', async (req, res) => {
+// Signup/Register handler function
+const handleSignup = async (req, res) => {
   try {
-    const { email, password, fullName } = req.body;
+    console.log('=== SIGNUP REQUEST RECEIVED ===');
+    console.log('Body:', req.body);
+    const { email, password, fullName, role, reverseInviteCode } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
@@ -100,15 +336,84 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with specified role (defaults to 'owner')
+    // Spec: All new signups are Owners who can create stories (unless specified as viewer for testing)
+    const userRole = role && (role === 'viewer' || role === 'owner') ? role : 'owner';
+
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, created_at, updated_at) 
-       VALUES ($1, $2, $3, NOW(), NOW()) 
-       RETURNING id, email, full_name`,
-      [email, hashedPassword, fullName]
+      `INSERT INTO users (email, password_hash, full_name, role, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING id, email, full_name, role`,
+      [email, hashedPassword, fullName, userRole]
     );
 
     const user = result.rows[0];
+
+    // Create user profile
+    await pool.query(
+      'INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+      [user.id]
+    );
+
+    // Create user stats
+    await pool.query(
+      'INSERT INTO user_stats (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+      [user.id]
+    );
+
+    // Handle reverse invite code if owner provided one
+    let reverseInviteUsed = false;
+    let viewerName = null;
+
+    if (reverseInviteCode && userRole === 'owner') {
+      try {
+        // Look up reverse invite token
+        const inviteResult = await pool.query(
+          `SELECT * FROM reverse_invite_tokens
+           WHERE invite_code = $1 AND is_active = TRUE AND expires_at > NOW()`,
+          [reverseInviteCode.toUpperCase()]
+        );
+
+        if (inviteResult.rows.length > 0) {
+          const invite = inviteResult.rows[0];
+          const viewerId = invite.viewer_id;
+
+          // Get viewer's name and email
+          const viewerResult = await pool.query(
+            'SELECT full_name, email FROM users WHERE id = $1',
+            [viewerId]
+          );
+
+          if (viewerResult.rows.length > 0) {
+            viewerName = viewerResult.rows[0].full_name;
+            const viewerEmail = viewerResult.rows[0].email;
+
+            // Create access grant (viewer can now see owner's stories)
+            await pool.query(
+              `INSERT INTO access_grants (owner_id, recipient_user_id, recipient_email, access_level, granted_by, granted_at, invited_via_code)
+               VALUES ($1, $2, $3, 'full', $1, NOW(), $4)`,
+              [user.id, viewerId, viewerEmail, reverseInviteCode.toUpperCase()]
+            );
+
+            // Mark reverse invite as used
+            await pool.query(
+              `UPDATE reverse_invite_tokens
+               SET used_at = NOW(), used_by_owner_id = $1, is_active = FALSE
+               WHERE id = $2`,
+              [user.id, invite.id]
+            );
+
+            reverseInviteUsed = true;
+            console.log(`✅ Owner ${user.full_name} connected to viewer ${viewerName} via reverse invite`);
+          }
+        } else {
+          console.log(`⚠️ Invalid or expired reverse invite code: ${reverseInviteCode}`);
+        }
+      } catch (inviteError) {
+        console.error('Error processing reverse invite:', inviteError);
+        // Don't fail signup if reverse invite processing fails
+      }
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -117,19 +422,31 @@ app.post('/api/auth/register', async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({
+    const response = {
       token,
       user: {
         id: user.id,
         email: user.email,
-        fullName: user.full_name
+        fullName: user.full_name,
+        role: user.role
       }
-    });
+    };
+
+    // Add reverse invite info if applicable
+    if (reverseInviteUsed) {
+      response.reverseInviteUsed = true;
+      response.viewerName = viewerName;
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
-});
+};
+
+app.post('/api/auth/register', handleSignup);
+app.post('/api/auth/signup', handleSignup);
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
@@ -170,7 +487,8 @@ app.post('/api/auth/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        fullName: user.full_name
+        fullName: user.full_name,
+        role: user.role
       }
     });
   } catch (error) {
@@ -703,6 +1021,446 @@ app.get('/api/access/my-access', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
+// INVITE SYSTEM (PHASE 2)
+// ============================================================================
+
+// Owner sends invite to family member
+app.post('/api/invites/send', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { method, recipientEmail, recipientPhone } = req.body;
+
+    // Validate method
+    const deliveryMethod = method || 'email';
+    if (!['email', 'sms'].includes(deliveryMethod)) {
+      return res.status(400).json({ error: 'Invalid method. Must be "email" or "sms"' });
+    }
+
+    // Validate recipient based on method
+    if (deliveryMethod === 'email') {
+      if (!recipientEmail || !recipientEmail.includes('@')) {
+        return res.status(400).json({ error: 'Valid email address required' });
+      }
+    } else if (deliveryMethod === 'sms') {
+      if (!recipientPhone) {
+        return res.status(400).json({ error: 'Phone number required for SMS' });
+      }
+      // Validate phone has at least 10 digits
+      const digits = recipientPhone.replace(/\D/g, '');
+      if (digits.length < 10) {
+        return res.status(400).json({ error: 'Phone number must have at least 10 digits' });
+      }
+    }
+
+    // Verify user is an Owner
+    const ownerCheck = await pool.query(
+      'SELECT role, full_name FROM users WHERE id = $1',
+      [ownerId]
+    );
+
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].role !== 'owner') {
+      return res.status(403).json({ error: 'Only owners can send invites' });
+    }
+
+    const ownerName = ownerCheck.rows[0].full_name;
+
+    // Generate unique invite code
+    let inviteCode;
+    let isUnique = false;
+    while (!isUnique) {
+      inviteCode = generateInviteCode();
+      const existing = await pool.query(
+        'SELECT id FROM invite_tokens WHERE invite_code = $1',
+        [inviteCode]
+      );
+      isUnique = existing.rows.length === 0;
+    }
+
+    // Create invite token (expires in 30 days)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await pool.query(
+      `INSERT INTO invite_tokens
+       (owner_id, invite_code, recipient_email, expires_at, delivery_method)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        ownerId,
+        inviteCode,
+        deliveryMethod === 'email' ? recipientEmail.toLowerCase() : recipientPhone,
+        expiresAt,
+        deliveryMethod
+      ]
+    );
+
+    // Send push notification if viewer already has an account
+    if (deliveryMethod === 'email') {
+      sendInviteNotification(pool, recipientEmail.toLowerCase(), ownerName, inviteCode)
+        .catch(err => console.error('Failed to send invite notification:', err));
+    }
+
+    // Send invite via chosen method (will skip if not configured)
+    let sendSuccess = false;
+    let sendError = null;
+    try {
+      if (deliveryMethod === 'email') {
+        await sendInviteEmail(recipientEmail, inviteCode, ownerName);
+      } else {
+        await sendInviteSMS(recipientPhone, inviteCode, ownerName);
+      }
+      sendSuccess = true;
+    } catch (error) {
+      console.error(`${deliveryMethod.toUpperCase()} send failed:`, error);
+      sendError = error.message || 'Failed to send invitation';
+      // If SMS/email is not configured, we'll still return success with a warning
+      // But if it's configured and fails, return error
+      if (deliveryMethod === 'sms' && process.env.TWILIO_ACCOUNT_SID) {
+        return res.status(500).json({ error: sendError });
+      }
+      if (deliveryMethod === 'email' && process.env.EMAIL_USER) {
+        return res.status(500).json({ error: sendError });
+      }
+    }
+
+    res.json({
+      success: true,
+      inviteCode,
+      method: deliveryMethod,
+      message: sendSuccess ? `Invitation sent via ${deliveryMethod}` : `Invitation created (${deliveryMethod} not configured)`
+    });
+  } catch (error) {
+    console.error('Send invite error:', error);
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
+});
+
+// Viewer (child) invites owner (parent) - REVERSE INVITE FLOW
+app.post('/api/invites/send-reverse', authenticateToken, async (req, res) => {
+  try {
+    const viewerId = req.user.userId;
+    const { method, recipientEmail, recipientPhone } = req.body;
+
+    // Validate method
+    const deliveryMethod = method || 'email';
+    if (!['email', 'sms'].includes(deliveryMethod)) {
+      return res.status(400).json({ error: 'Invalid method. Must be "email" or "sms"' });
+    }
+
+    // Validate recipient based on method
+    if (deliveryMethod === 'email') {
+      if (!recipientEmail || !recipientEmail.includes('@')) {
+        return res.status(400).json({ error: 'Valid email address required' });
+      }
+    } else if (deliveryMethod === 'sms') {
+      if (!recipientPhone) {
+        return res.status(400).json({ error: 'Phone number required for SMS' });
+      }
+    }
+
+    // Verify user is a Viewer
+    const viewerCheck = await pool.query(
+      'SELECT role, full_name FROM users WHERE id = $1',
+      [viewerId]
+    );
+
+    if (viewerCheck.rows.length === 0 || viewerCheck.rows[0].role !== 'viewer') {
+      return res.status(403).json({ error: 'Only viewers can send invites' });
+    }
+
+    const viewerName = viewerCheck.rows[0].full_name;
+
+    // Generate unique invite code
+    let inviteCode;
+    let isUnique = false;
+    while (!isUnique) {
+      inviteCode = generateInviteCode();
+      const existing = await pool.query(
+        'SELECT id FROM reverse_invite_tokens WHERE invite_code = $1',
+        [inviteCode]
+      );
+      isUnique = existing.rows.length === 0;
+    }
+
+    // Create reverse invite token (expires in 30 days)
+    // This will be used by the parent when they sign up
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await pool.query(
+      `INSERT INTO reverse_invite_tokens
+       (viewer_id, invite_code, recipient_email, recipient_phone, expires_at, delivery_method)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        viewerId,
+        inviteCode,
+        deliveryMethod === 'email' ? recipientEmail.toLowerCase() : null,
+        deliveryMethod === 'sms' ? recipientPhone : null,
+        expiresAt,
+        deliveryMethod
+      ]
+    );
+
+    // Send push notification if recipient already has an account
+    if (deliveryMethod === 'email') {
+      sendInviteNotification(pool, recipientEmail.toLowerCase(), viewerName, inviteCode, true)
+        .catch(err => console.error('Failed to send reverse invite notification:', err));
+    }
+
+    // Send invite via chosen method
+    try {
+      if (deliveryMethod === 'email') {
+        await sendReverseInviteEmail(recipientEmail, inviteCode, viewerName);
+      } else {
+        await sendReverseInviteSMS(recipientPhone, inviteCode, viewerName);
+      }
+    } catch (sendError) {
+      console.error(`${deliveryMethod.toUpperCase()} send failed:`, sendError);
+      // Don't fail the request if send fails - user can still use the code
+    }
+
+    res.json({
+      success: true,
+      inviteCode,
+      method: deliveryMethod,
+      message: `Invitation sent via ${deliveryMethod}`
+    });
+  } catch (error) {
+    console.error('Send reverse invite error:', error);
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
+});
+
+// Viewer accepts invite
+app.post('/api/invites/accept', authenticateToken, async (req, res) => {
+  try {
+    const viewerId = req.user.userId;
+    const { inviteCode } = req.body;
+
+    if (!inviteCode) {
+      return res.status(400).json({ error: 'Invite code required' });
+    }
+
+    // Verify user is a Viewer
+    const viewerCheck = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [viewerId]
+    );
+
+    if (viewerCheck.rows.length === 0 || viewerCheck.rows[0].role !== 'viewer') {
+      return res.status(403).json({ error: 'Only viewers can accept invites' });
+    }
+
+    // Find and validate invite token
+    const inviteResult = await pool.query(
+      `SELECT * FROM invite_tokens
+       WHERE invite_code = $1 AND is_active = TRUE`,
+      [inviteCode.toUpperCase()]
+    );
+
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Invalid or expired invite code' });
+    }
+
+    const invite = inviteResult.rows[0];
+
+    // Check if already used
+    if (invite.used_at) {
+      return res.status(400).json({ error: 'This invite has already been used' });
+    }
+
+    // Check if expired
+    if (new Date(invite.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'This invite has expired' });
+    }
+
+    // Check if access already exists
+    const existingAccess = await pool.query(
+      `SELECT id FROM access_grants
+       WHERE owner_id = $1 AND recipient_user_id = $2`,
+      [invite.owner_id, viewerId]
+    );
+
+    if (existingAccess.rows.length > 0) {
+      return res.status(400).json({ error: 'You already have access to this account' });
+    }
+
+    // Get viewer email
+    const viewerEmail = await pool.query(
+      'SELECT email FROM users WHERE id = $1',
+      [viewerId]
+    );
+
+    // Create access grant (access is ON by default for invites)
+    await pool.query(
+      `INSERT INTO access_grants
+       (owner_id, recipient_email, recipient_user_id, is_active, invited_via_code, invited_at, access_granted_at, granted_at)
+       VALUES ($1, $2, $3, TRUE, $4, NOW(), NOW(), NOW())`,
+      [invite.owner_id, viewerEmail.rows[0].email, viewerId, inviteCode.toUpperCase()]
+    );
+
+    // Mark invite as used
+    await pool.query(
+      `UPDATE invite_tokens
+       SET used_at = NOW(), used_by_user_id = $1, is_active = FALSE
+       WHERE id = $2`,
+      [viewerId, invite.id]
+    );
+
+    // Get owner info
+    const ownerInfo = await pool.query(
+      'SELECT full_name FROM users WHERE id = $1',
+      [invite.owner_id]
+    );
+
+    res.json({
+      success: true,
+      message: `You now have access to ${ownerInfo.rows[0].full_name}'s stories`,
+      ownerId: invite.owner_id,
+      ownerName: ownerInfo.rows[0].full_name
+    });
+  } catch (error) {
+    console.error('Accept invite error:', error);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+// Owner views sent invites
+app.get('/api/invites/my-invites', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT
+        id,
+        invite_code,
+        recipient_email,
+        created_at,
+        expires_at,
+        used_at,
+        is_active
+       FROM invite_tokens
+       WHERE owner_id = $1
+       ORDER BY created_at DESC`,
+      [ownerId]
+    );
+
+    res.json({
+      invites: result.rows
+    });
+  } catch (error) {
+    console.error('Get invites error:', error);
+    res.status(500).json({ error: 'Failed to get invites' });
+  }
+});
+
+// Owner views who has access (viewers)
+app.get('/api/access/my-viewers', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT
+        ag.id as grant_id,
+        ag.is_active,
+        ag.access_granted_at,
+        ag.revoked_at,
+        u.id as viewer_id,
+        u.email as viewer_email,
+        u.full_name as viewer_name
+       FROM access_grants ag
+       JOIN users u ON ag.recipient_user_id = u.id
+       WHERE ag.owner_id = $1
+       ORDER BY ag.access_granted_at DESC`,
+      [ownerId]
+    );
+
+    res.json({
+      viewers: result.rows
+    });
+  } catch (error) {
+    console.error('Get viewers error:', error);
+    res.status(500).json({ error: 'Failed to get viewers' });
+  }
+});
+
+// Viewer gets list of all owners they have access to
+app.get('/api/viewers/my-owners', authenticateToken, async (req, res) => {
+  try {
+    const viewerId = req.user.userId;
+
+    // Verify user is a viewer
+    const userCheck = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [viewerId]
+    );
+
+    if (userCheck.rows[0]?.role !== 'viewer') {
+      return res.status(403).json({ error: 'Only viewers can access this endpoint' });
+    }
+
+    // Get all owners this viewer has access to
+    const result = await pool.query(
+      `SELECT
+        ag.owner_id,
+        ag.is_active,
+        ag.access_granted_at,
+        u.full_name as owner_name,
+        u.email as owner_email
+       FROM access_grants ag
+       JOIN users u ON ag.owner_id = u.id
+       WHERE ag.recipient_user_id = $1
+         AND ag.is_active = TRUE
+         AND ag.revoked_at IS NULL
+       ORDER BY ag.access_granted_at DESC`,
+      [viewerId]
+    );
+
+    res.json({ owners: result.rows });
+  } catch (error) {
+    console.error('Get my owners error:', error);
+    res.status(500).json({ error: 'Failed to load owners' });
+  }
+});
+
+// Owner toggles viewer access ON/OFF
+app.put('/api/access/toggle/:grantId', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const { grantId } = req.params;
+
+    // Verify ownership
+    const grant = await pool.query(
+      'SELECT * FROM access_grants WHERE id = $1 AND owner_id = $2',
+      [grantId, ownerId]
+    );
+
+    if (grant.rows.length === 0) {
+      return res.status(404).json({ error: 'Access grant not found' });
+    }
+
+    const currentlyActive = grant.rows[0].is_active;
+
+    // Toggle access
+    await pool.query(
+      `UPDATE access_grants
+       SET is_active = $1,
+           revoked_at = CASE WHEN $1 = FALSE THEN NOW() ELSE NULL END
+       WHERE id = $2`,
+      [!currentlyActive, grantId]
+    );
+
+    res.json({
+      success: true,
+      isActive: !currentlyActive,
+      message: !currentlyActive ? 'Access restored' : 'Access revoked'
+    });
+  } catch (error) {
+    console.error('Toggle access error:', error);
+    res.status(500).json({ error: 'Failed to toggle access' });
+  }
+});
+
+// ============================================================================
 // QUESTION SUBMISSION SYSTEM
 // ============================================================================
 
@@ -717,43 +1475,114 @@ app.post('/api/questions/submit', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Owner ID and question text required' });
     }
 
-    // Verify submitter has access grant with submitQuestions permission
+    // Verify submitter has active access to this owner (Phase 1: binary access model)
     const accessCheck = await pool.query(
-      `SELECT permissions FROM access_grants
+      `SELECT id FROM access_grants
        WHERE owner_id = $1
-         AND (recipient_user_id = $2 OR recipient_email = $3)
-         AND is_active = true`,
-      [ownerId, submitterId, submitterEmail]
+         AND recipient_user_id = $2
+         AND is_active = TRUE
+         AND revoked_at IS NULL`,
+      [ownerId, submitterId]
     );
 
     if (accessCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'No access to submit questions' });
+      return res.status(403).json({ error: 'You do not have access to submit questions to this owner' });
     }
 
-    const permissions = typeof accessCheck.rows[0].permissions === 'string'
-      ? JSON.parse(accessCheck.rows[0].permissions)
-      : accessCheck.rows[0].permissions;
+    // SPEC REQUIREMENT: Enforce 3 pending question limit per owner
+    const pendingCount = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM submitted_questions
+       WHERE story_owner_id = $1 AND status = 'pending'`,
+      [ownerId]
+    );
 
-    if (!permissions.submitQuestions) {
-      return res.status(403).json({ error: 'Permission to submit questions not granted' });
+    const currentPending = parseInt(pendingCount.rows[0].count);
+
+    if (currentPending >= 3) {
+      return res.status(400).json({
+        error: 'Maximum 3 pending questions reached. Please wait for the owner to answer existing questions.',
+        pendingCount: currentPending
+      });
     }
 
     // Insert question
     const result = await pool.query(
-      `INSERT INTO submitted_questions (story_owner_id, submitter_user_id, submitter_email, question_text, status)
-       VALUES ($1, $2, $3, $4, 'pending')
+      `INSERT INTO submitted_questions (story_owner_id, submitter_user_id, submitter_email, question_text, status, created_at)
+       VALUES ($1, $2, $3, $4, 'pending', NOW())
        RETURNING *`,
       [ownerId, submitterId, submitterEmail, questionText.trim()]
     );
 
+    // Get submitter name for notification
+    const submitterResult = await pool.query(
+      'SELECT full_name FROM users WHERE id = $1',
+      [submitterId]
+    );
+    const submitterName = submitterResult.rows[0]?.full_name || submitterEmail;
+
+    // Send push notification to owner
+    sendFamilyQuestionNotification(pool, ownerId, submitterName, result.rows[0].id)
+      .catch(err => console.error('Failed to send question notification:', err));
+
     res.json({
       success: true,
       question: result.rows[0],
-      message: 'Question submitted successfully'
+      message: 'Question submitted successfully',
+      pendingCount: currentPending + 1
     });
   } catch (error) {
     console.error('Submit question error:', error);
     res.status(500).json({ error: 'Failed to submit question' });
+  }
+});
+
+// Get pending questions count for owner (Phase 3)
+app.get('/api/questions/pending-count', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM submitted_questions
+       WHERE story_owner_id = $1 AND status = 'pending'`,
+      [ownerId]
+    );
+
+    res.json({
+      count: parseInt(result.rows[0].count)
+    });
+  } catch (error) {
+    console.error('Get pending count error:', error);
+    res.status(500).json({ error: 'Failed to get pending count' });
+  }
+});
+
+// Get pending questions list for owner (Phase 3)
+app.get('/api/questions/pending', authenticateToken, async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT
+        sq.id,
+        sq.question_text,
+        sq.submitter_email,
+        sq.created_at,
+        u.full_name as submitter_name
+       FROM submitted_questions sq
+       LEFT JOIN users u ON sq.submitter_user_id = u.id
+       WHERE sq.story_owner_id = $1 AND sq.status = 'pending'
+       ORDER BY sq.created_at ASC`,
+      [ownerId]
+    );
+
+    res.json({
+      questions: result.rows
+    });
+  } catch (error) {
+    console.error('Get pending questions error:', error);
+    res.status(500).json({ error: 'Failed to get pending questions' });
   }
 });
 
@@ -809,15 +1638,135 @@ app.delete('/api/questions/:questionId', authenticateToken, async (req, res) => 
   }
 });
 
+// Get a specific submitted question by ID
+app.get('/api/questions/question/:questionId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { questionId } = req.params;
+
+    const result = await pool.query(
+      `SELECT
+        sq.id,
+        sq.question_text as prompt_text,
+        sq.submitter_email,
+        sq.submitter_user_id,
+        sq.story_owner_id
+       FROM submitted_questions sq
+       WHERE sq.id = $1 AND sq.status = 'pending'`,
+      [questionId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Question not found or already answered' });
+    }
+
+    const question = result.rows[0];
+
+    // Verify user is the story owner
+    if (question.story_owner_id !== userId) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Get submitter name if available
+    let submitterName = question.submitter_email;
+    if (question.submitter_user_id) {
+      const submitterResult = await pool.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [question.submitter_user_id]
+      );
+      if (submitterResult.rows.length > 0) {
+        submitterName = submitterResult.rows[0].full_name;
+      }
+    }
+
+    res.json({
+      prompt: {
+        id: `submitted_${question.id}`,
+        question: question.prompt_text,
+        category: 'Family Question',
+        type: 'submitted',
+        submitterInfo: {
+          name: submitterName
+        },
+        submittedQuestionId: question.id,
+        domain: 'Relationships',
+        story_type: 'Love & Connection',
+        emotional_weight: 'Medium'
+      }
+    });
+  } catch (error) {
+    console.error('Get question error:', error);
+    res.status(500).json({ error: 'Failed to get question' });
+  }
+});
+
+// ============================================================================
+// FILE UPLOADS
+// ============================================================================
+
+// Upload files (photos/videos) and return file IDs
+app.post('/api/files/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const uploadedFiles = req.files;
+
+    console.log('FILE UPLOAD - User ID:', userId);
+    console.log('FILE UPLOAD - Number of files:', uploadedFiles?.length || 0);
+
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    const fileRecords = [];
+
+    for (const file of uploadedFiles) {
+      console.log('FILE UPLOAD - Processing file:', file.originalname);
+      // Upload to S3
+      const s3Key = await uploadToS3(file, userId);
+      console.log('FILE UPLOAD - S3 key:', s3Key);
+
+      // Extract metadata
+      const metadata = {
+        originalName: file.originalname,
+        size: file.size,
+        mimeType: file.mimetype
+      };
+
+      // Save to database
+      const result = await pool.query(
+        `INSERT INTO user_files
+        (user_id, filename, file_path, file_type, file_size, metadata, uploaded_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        RETURNING *`,
+        [userId, file.originalname, s3Key, file.mimetype, file.size, JSON.stringify(metadata)]
+      );
+
+      console.log('FILE UPLOAD - Saved to DB with ID:', result.rows[0].id);
+      fileRecords.push(result.rows[0]);
+    }
+
+    console.log('FILE UPLOAD - Returning', fileRecords.length, 'file records');
+    console.log('FILE UPLOAD - File IDs:', fileRecords.map(f => f.id));
+
+    res.json({
+      success: true,
+      files: fileRecords
+    });
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({ error: 'Failed to upload files' });
+  }
+});
+
 // ============================================================================
 // DAILY PROMPTS
 // ============================================================================
 
-// Get today's prompt for user
+// Get today's prompt for user (UPDATED)
 app.get('/api/prompts/today', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    
+
     // Get user's timezone from profile, default to America/Phoenix if not set
     const userProfile = await pool.query(
       'SELECT timezone FROM user_profiles WHERE user_id = $1',
@@ -825,196 +1774,147 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
     );
     const userTimezone = userProfile.rows[0]?.timezone || 'America/Phoenix';
 
-    // Get today's date in user's local timezone using JavaScript
+    // Get today's date in user's local timezone using Intl API
     const now = new Date();
-    const todayInUserTZ = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
-    const year = todayInUserTZ.getFullYear();
-    const month = String(todayInUserTZ.getMonth() + 1).padStart(2, '0');
-    const day = String(todayInUserTZ.getDate()).padStart(2, '0');
-    const todayDate = `${year}-${month}-${day}`;
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: userTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const todayDate = formatter.format(now); // Returns YYYY-MM-DD format
 
-    // Calculate timezone offset in hours
-    const localDateStr = now.toLocaleString('en-US', { timeZone: userTimezone, hour12: false });
-    const utcDateStr = now.toLocaleString('en-US', { timeZone: 'UTC', hour12: false });
-    const localTime = new Date(localDateStr);
-    const utcTime = new Date(utcDateStr);
-    const offsetHours = (localTime - utcTime) / (1000 * 60 * 60);
+    console.log('=== GET TODAY PROMPT ===');
+    console.log('User ID:', userId);
+    console.log('User Timezone:', userTimezone);
+    console.log('Today Date (calculated):', todayDate);
+    console.log('Current UTC:', now.toISOString());
 
-    // Check if user already answered TODAY'S DAILY prompt
-    // Apply timezone offset to convert UTC to local time, then compare dates
-    const existingResponse = await pool.query(
-      `SELECT pr.*, p.question, p.category 
-       FROM prompt_responses pr
-       LEFT JOIN prompts p ON pr.prompt_id = p.id
-       WHERE pr.user_id = $1 
-       AND DATE(pr.created_at + INTERVAL '${offsetHours} hours') = $2
-       AND pr.response_type = 'daily'
-       LIMIT 1`,
-      [userId, todayDate]
-    );
-
-    if (existingResponse.rows.length > 0) {
-      return res.json({
-        answered: true,
-        response: existingResponse.rows[0]
-      });
-    }
-
-    // Check for pending submitted questions from family/friends
-    const submittedQuestion = await pool.query(
-      `SELECT sq.*, u.full_name as submitter_name
-       FROM submitted_questions sq
-       LEFT JOIN users u ON sq.submitter_user_id = u.id
-       WHERE sq.story_owner_id = $1
-         AND sq.status = 'pending'
-       ORDER BY sq.created_at ASC
-       LIMIT 1`,
+    // Get user's onboarding status
+    const userResult = await pool.query(
+      'SELECT first_system_prompt_completed FROM users WHERE id = $1',
       [userId]
     );
+    const hasCompletedOnboarding = userResult.rows[0]?.first_system_prompt_completed || false;
+    console.log('Has completed onboarding:', hasCompletedOnboarding);
+
+    // STEP 1: Check for submitted questions (only if onboarding complete)
+    // Spec: "Family questions must not appear during onboarding"
+    // Spec: "They become eligible only after the owner has completed or skipped at least one system prompt"
+    let submittedQuestion = { rows: [] };
+
+    if (hasCompletedOnboarding) {
+      submittedQuestion = await pool.query(
+        `SELECT id, question_text as prompt_text, submitter_email, submitter_user_id
+         FROM submitted_questions
+         WHERE story_owner_id = $1 AND status = 'pending'
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [userId]
+      );
+    } else {
+      console.log('Skipping family questions - user has not completed onboarding');
+    }
 
     if (submittedQuestion.rows.length > 0) {
       const question = submittedQuestion.rows[0];
 
-      // Mark question as used
-      await pool.query(
-        `UPDATE submitted_questions
-         SET status = 'used', used_as_prompt_at = NOW()
-         WHERE id = $1`,
-        [question.id]
-      );
+      // Get submitter name if available
+      let submitterName = question.submitter_email;
+      if (question.submitter_user_id) {
+        const submitterResult = await pool.query(
+          'SELECT full_name FROM users WHERE id = $1',
+          [question.submitter_user_id]
+        );
+        if (submitterResult.rows.length > 0) {
+          submitterName = submitterResult.rows[0].full_name;
+        }
+      }
 
       return res.json({
         answered: false,
         prompt: {
-          id: null,
-          question: question.question_text,
-          category: 'family_question',
+          id: `submitted_${question.id}`,
+          question: question.prompt_text,
+          category: 'Family Question',
           type: 'submitted',
-          submittedQuestionId: question.id,
           submitterInfo: {
-            name: question.submitter_name,
-            email: question.submitter_email
-          }
+            name: submitterName
+          },
+          submittedQuestionId: question.id,
+          domain: 'Relationships',
+          story_type: 'Love & Connection',
+          emotional_weight: 'Medium'
         }
       });
     }
 
-    // Get user profile for personalization
-    const profileResult = await pool.query(
-      'SELECT * FROM user_profiles WHERE user_id = $1',
-      [userId]
+    // STEP 2: Check if user already answered a prompt today
+    const answeredToday = await pool.query(
+      `SELECT pr.*, p.prompt_text, p.domain, p.story_type, p.emotional_weight, p.gate_tag
+       FROM prompt_responses pr
+       LEFT JOIN prompts p ON pr.prompt_id = p.id
+       WHERE pr.user_id = $1
+         AND DATE(pr.created_at AT TIME ZONE $2) = $3
+       ORDER BY pr.created_at DESC
+       LIMIT 1`,
+      [userId, userTimezone, todayDate]
     );
 
-    let interests = [];
-    let lifeEvents = [];
-    let birthLocation = null;
-
-    if (profileResult.rows.length > 0) {
-      const profile = profileResult.rows[0];
-      
-      // Handle interests - could be JSON array or comma-separated string
-      try {
-        if (profile.interests) {
-          if (typeof profile.interests === 'string') {
-            // Try to parse as JSON first
-            try {
-              interests = JSON.parse(profile.interests);
-            } catch {
-              // If that fails, treat as comma-separated string
-              interests = profile.interests.split(',').map(i => i.trim()).filter(Boolean);
-            }
-          } else if (Array.isArray(profile.interests)) {
-            interests = profile.interests;
-          }
-        }
-      } catch (err) {
-        console.error('Error parsing interests:', err);
-        interests = [];
-      }
-
-      // Handle life events - could be JSON array or comma-separated string
-      try {
-        if (profile.life_events) {
-          if (typeof profile.life_events === 'string') {
-            // Try to parse as JSON first
-            try {
-              lifeEvents = JSON.parse(profile.life_events);
-            } catch {
-              // If that fails, treat as comma-separated string
-              lifeEvents = profile.life_events.split(',').map(i => i.trim()).filter(Boolean);
-            }
-          } else if (Array.isArray(profile.life_events)) {
-            lifeEvents = profile.life_events;
-          }
-        }
-      } catch (err) {
-        console.error('Error parsing life events:', err);
-        lifeEvents = [];
-      }
-
-      birthLocation = profile.birth_location;
+    console.log('Answered today query results:', answeredToday.rows.length, 'rows');
+    if (answeredToday.rows.length > 0) {
+      console.log('Found answer from:', answeredToday.rows[0].created_at);
+      console.log('Response text:', answeredToday.rows[0].response_text?.substring(0, 50) + '...');
     }
 
-    // Get prompts user hasn't answered yet
-    const promptsResult = await pool.query(
-      `SELECT p.* FROM prompts p
-       WHERE p.id NOT IN (
-         SELECT prompt_id FROM prompt_responses WHERE user_id = $1
-       )
-       ORDER BY RANDOM()
-       LIMIT 10`,
-      [userId]
-    );
-
-    let selectedPrompt = null;
-
-    if (promptsResult.rows.length > 0) {
-      // Try to find a prompt matching user's interests or life events
-      for (const prompt of promptsResult.rows) {
-        const category = prompt.category?.toLowerCase() || '';
-        
-        // Check if prompt category matches interests
-        if (interests.some(interest => category.includes(interest.toLowerCase()))) {
-          selectedPrompt = prompt;
-          break;
+    if (answeredToday.rows.length > 0) {
+      const answered = answeredToday.rows[0];
+      return res.json({
+        answered: true,
+        prompt: {
+          id: answered.prompt_id,
+          question: answered.prompt_text,
+          response: answered.response_text,
+          responseId: answered.id,
+          domain: answered.domain,
+          story_type: answered.story_type,
+          emotional_weight: answered.emotional_weight,
+          gate_tag: answered.gate_tag
         }
-        
-        // Check if prompt category matches life events
-        if (lifeEvents.some(event => category.includes(event.toLowerCase()))) {
-          selectedPrompt = prompt;
-          break;
-        }
-      }
+      });
+    }
 
-      // If no match, just use first available prompt
-      if (!selectedPrompt) {
-        selectedPrompt = promptsResult.rows[0];
-      }
+    // STEP 3: Use new weighted prompt selection engine
+    const selectedPrompt = await getNextPrompt(pool, userId);
 
-      // Personalize the question if possible
-      let personalizedQuestion = selectedPrompt.question;
-      if (birthLocation && personalizedQuestion.includes('{location}')) {
-        personalizedQuestion = personalizedQuestion.replace('{location}', birthLocation);
-      }
-
+    if (selectedPrompt) {
       res.json({
         answered: false,
         prompt: {
           id: selectedPrompt.id,
-          question: personalizedQuestion,
-          category: selectedPrompt.category,
-          type: selectedPrompt.prompt_type
+          question: selectedPrompt.prompt_text,
+          category: selectedPrompt.domain,
+          type: selectedPrompt.story_type,
+          domain: selectedPrompt.domain,
+          story_type: selectedPrompt.story_type,
+          emotional_weight: selectedPrompt.emotional_weight,
+          depth: selectedPrompt.depth,
+          requires_gate: selectedPrompt.requires_gate,
+          gate_tag: selectedPrompt.gate_tag
         }
       });
     } else {
-      // All prompts answered - could reset or generate new ones
+      // No prompts available
       res.json({
         answered: false,
         prompt: {
           id: null,
-          question: "You've answered all available prompts! Tell me about a memory that made you smile recently.",
+          question: "You've answered all available prompts! Check back tomorrow for new prompts.",
           category: "general",
-          type: "nostalgic"
+          type: "reflection",
+          domain: "Identity",
+          story_type: "Reflection & Wisdom",
+          emotional_weight: "Light"
         }
       });
     }
@@ -1024,31 +1924,43 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
   }
 });
 
-// Get next prompt (for answering multiple prompts per day)
+// Get next prompt (UPDATED for new schema)
 app.get('/api/prompts/next', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // Get prompts user hasn't answered yet
-    const promptsResult = await pool.query(
-      `SELECT p.* FROM prompts p
-       WHERE p.id NOT IN (
-         SELECT prompt_id FROM prompt_responses WHERE user_id = $1 AND prompt_id IS NOT NULL
-       )
-       ORDER BY RANDOM()
-       LIMIT 1`,
+    // Get prompts user hasn't answered yet (exclude last 30 days)
+    const recentPrompts = await pool.query(
+      `SELECT prompt_id FROM prompt_responses
+       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '30 days'`,
       [userId]
     );
+    const excludedIds = recentPrompts.rows.map(r => r.prompt_id).filter(id => id);
+
+    let query = `SELECT * FROM prompts WHERE is_active = TRUE`;
+    const params = [userId];
+
+    if (excludedIds.length > 0) {
+      query += ` AND id NOT IN (${excludedIds.map((_, i) => `$${i + 2}`).join(',')})`;
+      params.push(...excludedIds);
+    }
+
+    query += ` ORDER BY RANDOM() LIMIT 1`;
+
+    const promptsResult = await pool.query(query, params);
 
     if (promptsResult.rows.length > 0) {
       const prompt = promptsResult.rows[0];
-      
+
       res.json({
         prompt: {
           id: prompt.id,
-          question: prompt.question,
-          category: prompt.category,
-          type: prompt.prompt_type
+          question: prompt.prompt_text,
+          category: prompt.domain,
+          type: prompt.story_type,
+          domain: prompt.domain,
+          story_type: prompt.story_type,
+          emotional_weight: prompt.emotional_weight
         }
       });
     } else {
@@ -1066,8 +1978,15 @@ app.get('/api/prompts/next', authenticateToken, async (req, res) => {
 // Submit prompt response
 app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
   try {
-    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title, submittedQuestionId } = req.body;
+    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title, submittedQuestionId, fileIds } = req.body;
     const userId = req.user.userId;
+
+    console.log('=== SAVE RESPONSE ===');
+    console.log('User ID:', userId);
+    console.log('Prompt ID:', promptId);
+    console.log('Is Bonus:', isBonus);
+    console.log('Is Free Write:', isFreeWrite);
+    console.log('Submitted Question ID:', submittedQuestionId);
 
     if (!response || response.trim().length === 0) {
       return res.status(400).json({ error: 'Response cannot be empty' });
@@ -1122,6 +2041,22 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
       [userId, promptId, promptText, response, responseType]
     );
 
+    const responseId = result.rows[0].id;
+    console.log('Response saved! ID:', responseId);
+    console.log('Response type:', responseType);
+    console.log('Created at (UTC):', result.rows[0].created_at);
+
+    // Link files to response if provided
+    if (fileIds && Array.isArray(fileIds) && fileIds.length > 0) {
+      for (let i = 0; i < fileIds.length; i++) {
+        await pool.query(
+          `INSERT INTO response_files (response_id, file_id, display_order)
+           VALUES ($1, $2, $3)`,
+          [responseId, fileIds[i], i]
+        );
+      }
+    }
+
     // Calculate streak
     const streakResult = await pool.query(
       `SELECT COUNT(DISTINCT DATE(created_at)) as streak
@@ -1133,10 +2068,54 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 
     const streak = streakResult.rows[0]?.streak || 1;
 
+    // Mark onboarding as complete if this is a system prompt (not family question or free write)
+    // Spec: "They become eligible only after the owner has completed or skipped at least one system prompt"
+    if (!submittedQuestionId && !isFreeWrite && !isFollowUp && promptId) {
+      await pool.query(
+        'UPDATE users SET first_system_prompt_completed = TRUE WHERE id = $1',
+        [userId]
+      );
+      console.log('Marked onboarding complete for user:', userId);
+    }
+
+    // If answering a submitted question, mark it as used and notify submitter
+    if (submittedQuestionId) {
+      await pool.query(
+        `UPDATE submitted_questions
+         SET status = 'used', used_as_prompt_at = NOW()
+         WHERE id = $1`,
+        [submittedQuestionId]
+      );
+
+      // Get owner name and submitter ID for notification
+      const ownerResult = await pool.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [userId]
+      );
+      const ownerName = ownerResult.rows[0]?.full_name || 'Story owner';
+
+      const questionResult = await pool.query(
+        'SELECT submitter_user_id FROM submitted_questions WHERE id = $1',
+        [submittedQuestionId]
+      );
+      const submitterId = questionResult.rows[0]?.submitter_user_id;
+
+      if (submitterId) {
+        // Send notification to viewer who submitted the question
+        sendResponseReceivedNotification(pool, submitterId, ownerName, responseId)
+          .catch(err => console.error('Failed to send response notification:', err));
+      }
+    }
+
+    // Reset notification cooldown since user engaged
+    resetNotificationCooldown(pool, userId)
+      .catch(err => console.error('Failed to reset notification cooldown:', err));
+
     res.json({
       success: true,
       response: result.rows[0],
-      responseId: result.rows[0].id,
+      id: responseId,
+      responseId: responseId,
       streak: streak,
       message: 'Response saved successfully!'
     });
@@ -1260,20 +2239,56 @@ Generate 2-3 follow-up questions to help them share more about this story.`
   }
 });
 
-// Get user's response history
+// Get user's response history (UPDATED for new schema)
 app.get('/api/prompts/history', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
     const result = await pool.query(
-      `SELECT pr.*, p.question, p.category, p.prompt_type
+      `SELECT
+        pr.*,
+        p.prompt_text, p.domain, p.story_type, p.emotional_weight,
+        u.full_name as owner_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', uf.id,
+              'filename', uf.filename,
+              'file_path', uf.file_path,
+              'file_type', uf.file_type,
+              'file_size', uf.file_size
+            )
+            ORDER BY rf.display_order
+          ) FILTER (WHERE uf.id IS NOT NULL),
+          '[]'
+        ) as files
        FROM prompt_responses pr
        LEFT JOIN prompts p ON pr.prompt_id = p.id
+       LEFT JOIN response_files rf ON pr.id = rf.response_id
+       LEFT JOIN user_files uf ON rf.file_id = uf.id
+       LEFT JOIN users u ON pr.user_id = u.id
        WHERE pr.user_id = $1
+          OR pr.user_id IN (
+            SELECT owner_id
+            FROM access_grants
+            WHERE recipient_user_id = $1 AND is_active = TRUE
+          )
+       GROUP BY pr.id, p.id, u.full_name
        ORDER BY pr.created_at DESC
        LIMIT 50`,
       [userId]
     );
+
+    // Generate signed URLs for all files in responses
+    for (const response of result.rows) {
+      if (response.files && response.files.length > 0) {
+        for (const file of response.files) {
+          if (file.file_path) {
+            file.file_path = await getSignedFileUrl(file.file_path);
+          }
+        }
+      }
+    }
 
     res.json({
       responses: result.rows
@@ -1283,6 +2298,612 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to get history' });
   }
 });
+
+// Get single story detail by response ID
+app.get('/api/prompts/response/:responseId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { responseId } = req.params;
+
+    console.log('GET STORY - Response ID:', responseId);
+
+    const result = await pool.query(
+      `SELECT
+        pr.*,
+        p.prompt_text, p.domain, p.story_type, p.emotional_weight,
+        u.full_name as owner_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', uf.id,
+              'filename', uf.filename,
+              'file_path', uf.file_path,
+              'file_type', uf.file_type,
+              'file_size', uf.file_size,
+              'metadata', uf.metadata
+            )
+            ORDER BY rf.display_order
+          ) FILTER (WHERE uf.id IS NOT NULL),
+          '[]'
+        ) as files
+       FROM prompt_responses pr
+       LEFT JOIN prompts p ON pr.prompt_id = p.id
+       LEFT JOIN response_files rf ON pr.id = rf.response_id
+       LEFT JOIN user_files uf ON rf.file_id = uf.id
+       LEFT JOIN users u ON pr.user_id = u.id
+       WHERE pr.id = $1
+         AND (pr.user_id = $2
+           OR pr.user_id IN (
+             SELECT owner_id
+             FROM access_grants
+             WHERE recipient_user_id = $2 AND is_active = TRUE
+           ))
+       GROUP BY pr.id, p.id, u.full_name`,
+      [responseId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    // Generate signed URLs for files
+    const story = result.rows[0];
+    console.log('GET STORY - Found', story.files?.length || 0, 'files');
+    if (story.files && story.files.length > 0) {
+      console.log('GET STORY - File IDs:', story.files.map(f => f.id));
+      for (const file of story.files) {
+        if (file.file_path) {
+          file.file_path = await getSignedFileUrl(file.file_path);
+        }
+      }
+    }
+
+    res.json({
+      response: story
+    });
+  } catch (error) {
+    console.error('Get story detail error:', error);
+    res.status(500).json({ error: 'Failed to get story detail' });
+  }
+});
+
+// Update story response text
+app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { responseId } = req.params;
+    const { response, fileIds } = req.body;
+
+    console.log('UPDATE STORY - Response ID:', responseId);
+    console.log('UPDATE STORY - Received fileIds:', fileIds);
+
+    if (!response || response.trim() === '') {
+      return res.status(400).json({ error: 'Response text is required' });
+    }
+
+    // First check if the story belongs to the user
+    const checkResult = await pool.query(
+      'SELECT id FROM prompt_responses WHERE id = $1 AND user_id = $2',
+      [responseId, userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    // Update the response text
+    const result = await pool.query(
+      `UPDATE prompt_responses
+       SET response_text = $1
+       WHERE id = $2 AND user_id = $3
+       RETURNING *`,
+      [response.trim(), responseId, userId]
+    );
+
+    // Handle file updates if fileIds provided
+    if (fileIds !== undefined && fileIds !== null) {
+      console.log('Deleting existing file associations...');
+      // Delete existing file associations
+      const deleteResult = await pool.query(
+        'DELETE FROM response_files WHERE response_id = $1',
+        [responseId]
+      );
+      console.log('Deleted', deleteResult.rowCount, 'existing associations');
+
+      // Add new file associations
+      if (Array.isArray(fileIds) && fileIds.length > 0) {
+        console.log('Adding', fileIds.length, 'new file associations...');
+        for (let i = 0; i < fileIds.length; i++) {
+          await pool.query(
+            `INSERT INTO response_files (response_id, file_id, display_order)
+             VALUES ($1, $2, $3)`,
+            [responseId, fileIds[i], i]
+          );
+          console.log('Added file ID:', fileIds[i], 'at position', i);
+        }
+      }
+    }
+
+    res.json({
+      message: 'Story updated successfully',
+      response: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Update story error:', error);
+    res.status(500).json({ error: 'Failed to update story' });
+  }
+});
+
+// ============================================================================
+// NEW GATE MANAGEMENT ENDPOINTS
+// ============================================================================
+
+// Get all available gates (life events)
+app.get('/api/gates/available', authenticateToken, async (req, res) => {
+  try {
+    // Return list of all available gates with descriptions
+    const gates = [
+      {
+        tag: 'parenthood',
+        name: 'Parenthood',
+        description: 'Stories about becoming a parent, raising children, and family life',
+        icon: '👶'
+      },
+      {
+        tag: 'partnership_marriage',
+        name: 'Partnership & Marriage',
+        description: 'Stories about your romantic relationship, partnership, or marriage',
+        icon: '💕'
+      },
+      {
+        tag: 'college_education',
+        name: 'College & Higher Education',
+        description: 'Stories from your college years and educational journey',
+        icon: '🎓'
+      },
+      {
+        tag: 'immigration',
+        name: 'Immigration',
+        description: 'Stories about moving to a new country and cultural adaptation',
+        icon: '✈️'
+      },
+      {
+        tag: 'major_move',
+        name: 'Major Move',
+        description: 'Stories about relocating to a new city or significant life transition',
+        icon: '🏠'
+      },
+      {
+        tag: 'military_service',
+        name: 'Military Service',
+        description: 'Stories from your time in military service',
+        icon: '🎖️'
+      },
+      {
+        tag: 'faith_community',
+        name: 'Faith & Community',
+        description: 'Stories about your spiritual journey and community involvement',
+        icon: '⛪'
+      },
+      {
+        tag: 'sports_competition',
+        name: 'Sports & Competition',
+        description: 'Stories about athletics, competition, and team experiences',
+        icon: '⚽'
+      },
+      {
+        tag: 'loss_grief',
+        name: 'Loss & Grief',
+        description: 'Stories about losing loved ones and processing grief',
+        icon: '🕊️'
+      },
+      {
+        tag: 'caregiving',
+        name: 'Caregiving',
+        description: 'Stories about caring for aging parents or family members',
+        icon: '💙'
+      },
+      {
+        tag: 'creative_hobby',
+        name: 'Creative Hobby',
+        description: 'Stories about your creative pursuits and artistic passions',
+        icon: '🎨'
+      },
+      {
+        tag: 'career_pivot',
+        name: 'Career Pivot',
+        description: 'Stories about major career changes and professional transformation',
+        icon: '💼'
+      }
+    ];
+
+    res.json({ gates });
+  } catch (error) {
+    console.error('Get available gates error:', error);
+    res.status(500).json({ error: 'Failed to get available gates' });
+  }
+});
+
+// Get user's unlocked gates
+app.get('/api/gates/my-gates', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT gate_tag, unlocked_at, current_arc_step
+       FROM user_unlocked_gates
+       WHERE user_id = $1
+       ORDER BY unlocked_at DESC`,
+      [userId]
+    );
+
+    // Get count of prompts for each unlocked gate
+    const gatesWithCounts = await Promise.all(
+      result.rows.map(async (gate) => {
+        const countResult = await pool.query(
+          'SELECT COUNT(*) as total_prompts FROM prompts WHERE gate_tag = $1 AND requires_gate = TRUE',
+          [gate.gate_tag]
+        );
+        return {
+          ...gate,
+          total_prompts: parseInt(countResult.rows[0].total_prompts)
+        };
+      })
+    );
+
+    res.json({ gates: gatesWithCounts });
+  } catch (error) {
+    console.error('Get my gates error:', error);
+    res.status(500).json({ error: 'Failed to get unlocked gates' });
+  }
+});
+
+// Unlock a gate (life event) - DEPRECATED, see line 1992 for array version
+// app.post('/api/gates/unlock', authenticateToken, async (req, res) => {
+//   This endpoint has been replaced by the array version at line 1992
+// });
+
+// Remove/lock a gate
+app.delete('/api/gates/:gateTag', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { gateTag } = req.params;
+
+    await pool.query(
+      'DELETE FROM user_unlocked_gates WHERE user_id = $1 AND gate_tag = $2',
+      [userId, gateTag]
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully removed ${gateTag} gate`
+    });
+  } catch (error) {
+    console.error('Delete gate error:', error);
+    res.status(500).json({ error: 'Failed to remove gate' });
+  }
+});
+
+// ============================================================================
+// RATING & SKIP ENDPOINTS FOR ADVANCED PROMPT SELECTION
+// ============================================================================
+
+// RATE A PROMPT (After answering)
+app.post('/api/prompts/rate', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { promptId, responseId, rating } = req.body;
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 3) {
+      return res.status(400).json({ error: 'Rating must be 1, 2, or 3' });
+    }
+
+    if (!promptId) {
+      return res.status(400).json({ error: 'promptId is required' });
+    }
+
+    const result = await onRating(pool, userId, promptId, responseId, rating);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Rate prompt error:', error);
+    res.status(500).json({ error: 'Failed to save rating' });
+  }
+});
+
+// SKIP A PROMPT
+app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { promptId, skipReason } = req.body;
+
+    if (!promptId) {
+      return res.status(400).json({ error: 'promptId is required' });
+    }
+
+    // Validate skip reason if provided
+    const validReasons = Object.values(SKIP_REASON);
+    if (skipReason && !validReasons.includes(skipReason)) {
+      return res.status(400).json({
+        error: `Invalid skip reason. Must be one of: ${validReasons.join(', ')}`
+      });
+    }
+
+    // Get today's date
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get or create daily stats
+    const statsResult = await pool.query(
+      `INSERT INTO user_daily_stats (user_id, stat_date, skip_count)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (user_id, stat_date)
+       DO UPDATE SET skip_count = user_daily_stats.skip_count + 1
+       RETURNING skip_count`,
+      [userId, today]
+    );
+
+    const skipCount = statsResult.rows[0].skip_count;
+
+    // Record skip in history
+    const promptResult = await pool.query('SELECT * FROM prompts WHERE id = $1', [promptId]);
+    if (promptResult.rows.length > 0) {
+      const prompt = promptResult.rows[0];
+      await pool.query(
+        `INSERT INTO user_prompt_history
+         (user_id, prompt_id, action, skip_reason, domain, story_type, depth, gate_tag)
+         VALUES ($1, $2, 'skipped', $3, $4, $5, $6, $7)`,
+        [userId, promptId, skipReason, prompt.domain, prompt.story_type, prompt.depth, prompt.gate_tag]
+      );
+
+      // Update affinity if skip reason provided
+      if (skipReason) {
+        await pool.query(
+          'SELECT update_affinity_from_skip($1, $2, $3, $4, $5)',
+          [userId, prompt.domain, prompt.story_type, prompt.depth, skipReason]
+        );
+      }
+
+      // Mark onboarding as complete if this is a system prompt skip
+      // Spec: "They become eligible only after the owner has completed or skipped at least one system prompt"
+      await pool.query(
+        'UPDATE users SET first_system_prompt_completed = TRUE WHERE id = $1',
+        [userId]
+      );
+      console.log('Marked onboarding complete after skip for user:', userId);
+    }
+
+    // Determine rescue mode based on skip count
+    if (skipCount >= 3) {
+      // After 3 skips: show 5-prompt list
+      const prompts = await pool.query(
+        `SELECT id, prompt_text as question, domain, story_type, depth, emotional_weight, gate_tag
+         FROM prompts
+         WHERE is_active = TRUE AND requires_gate = FALSE
+         ORDER BY RANDOM()
+         LIMIT 5`
+      );
+
+      return res.json({
+        success: true,
+        needsChoice: true,
+        choices: prompts.rows
+      });
+    } else if (skipCount === 2) {
+      // After 2 skips: show rescue mode options
+      return res.json({
+        success: true,
+        needsChoice: true,
+        options: [
+          { mode: 'rescue_light', label: 'Something lighter' },
+          { mode: 'rescue_thoughtful', label: 'Something thoughtful' },
+          { mode: 'rescue_surprise', label: 'Surprise me' }
+        ]
+      });
+    } else {
+      // First skip: get lighter, different domain prompt (spec requirement)
+      const nextPrompt = await getNextPrompt(pool, userId, 'rescue_light');
+
+      if (nextPrompt) {
+        return res.json({
+          success: true,
+          nextPrompt: {
+            id: nextPrompt.id,
+            question: nextPrompt.prompt_text,
+            category: nextPrompt.domain,
+            type: nextPrompt.story_type,
+            domain: nextPrompt.domain,
+            story_type: nextPrompt.story_type,
+            emotional_weight: nextPrompt.emotional_weight,
+            depth: nextPrompt.depth,
+            requires_gate: nextPrompt.requires_gate,
+            gate_tag: nextPrompt.gate_tag
+          }
+        });
+      } else {
+        return res.json({
+          success: true,
+          nextPrompt: null
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Skip prompt error:', error);
+    res.status(500).json({ error: 'Failed to skip prompt' });
+  }
+});
+
+// GET NEXT PROMPT WITH SELECTION MODE
+app.get('/api/prompts/next-weighted', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const mode = req.query.mode || SELECTION_MODE.NORMAL;
+
+    // Validate mode
+    const validModes = Object.values(SELECTION_MODE);
+    if (!validModes.includes(mode)) {
+      return res.status(400).json({
+        error: `Invalid mode. Must be one of: ${validModes.join(', ')}`
+      });
+    }
+
+    const prompt = await getNextPrompt(pool, userId, mode);
+
+    res.json({ prompt });
+  } catch (error) {
+    console.error('Get next weighted prompt error:', error);
+    res.status(500).json({ error: 'Failed to get prompt' });
+  }
+});
+
+// GET USER AFFINITY DASHBOARD (Optional - for debugging/admin)
+app.get('/api/prompts/affinity', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Get all affinities
+    const affinities = await pool.query(`
+      SELECT domain, story_type, depth, affinity_score, update_count, last_updated
+      FROM user_prompt_affinity
+      WHERE user_id = $1
+      ORDER BY ABS(affinity_score) DESC
+    `, [userId]);
+
+    // Get skip history
+    const skipHistory = await pool.query(`
+      SELECT DATE(shown_at) as date, COUNT(*) as skip_count
+      FROM user_prompt_history
+      WHERE user_id = $1 AND action = 'skipped'
+      GROUP BY DATE(shown_at)
+      ORDER BY date DESC
+      LIMIT 30
+    `, [userId]);
+
+    // Get rating distribution
+    const ratings = await pool.query(`
+      SELECT rating, COUNT(*) as count
+      FROM prompt_ratings
+      WHERE user_id = $1
+      GROUP BY rating
+      ORDER BY rating DESC
+    `, [userId]);
+
+    // Get suppressed items
+    const suppressed = await pool.query(`
+      SELECT prompt_id, domain, story_type, gate_tag, suppression_strength, reason
+      FROM user_suppressed_prompts
+      WHERE user_id = $1
+    `, [userId]);
+
+    res.json({
+      affinities: affinities.rows,
+      skipHistory: skipHistory.rows,
+      ratingDistribution: ratings.rows,
+      suppressed: suppressed.rows
+    });
+  } catch (error) {
+    console.error('Get affinity error:', error);
+    res.status(500).json({ error: 'Failed to get affinity data' });
+  }
+});
+
+// CHOOSE FROM PROMPT LIST (After 3 skips)
+app.post('/api/prompts/choose', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { promptId } = req.body;
+
+    if (!promptId) {
+      return res.status(400).json({ error: 'promptId is required' });
+    }
+
+    // Validate prompt exists and is eligible
+    const promptResult = await pool.query(
+      'SELECT * FROM prompts WHERE id = $1 AND is_active = TRUE',
+      [promptId]
+    );
+
+    if (promptResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    const prompt = promptResult.rows[0];
+
+    // Record shown event
+    const today = new Date().toISOString().split('T')[0];
+    await pool.query(`
+      INSERT INTO user_prompt_history
+      (user_id, prompt_id, action, domain, story_type, depth, gate_tag)
+      VALUES ($1, $2, 'shown', $3, $4, $5, $6)
+    `, [userId, promptId, prompt.domain, prompt.story_type, prompt.depth, prompt.gate_tag]);
+
+    // Update daily stats
+    await pool.query(`
+      UPDATE user_daily_stats
+      SET last_prompt_id = $3,
+          last_prompt_domain = $4,
+          last_prompt_story_type = $5,
+          last_prompt_depth = $6,
+          last_prompt_gate_tag = $7
+      WHERE user_id = $1 AND stat_date = $2
+    `, [userId, today, promptId, prompt.domain, prompt.story_type, prompt.depth, prompt.gate_tag]);
+
+    res.json({
+      success: true,
+      prompt: prompt
+    });
+  } catch (error) {
+    console.error('Choose prompt error:', error);
+    res.status(500).json({ error: 'Failed to choose prompt' });
+  }
+});
+
+// UNSUPPRESS A CATEGORY (Allow user to re-enable suppressed content)
+app.delete('/api/prompts/unsuppress', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { domain, storyType, gateTag } = req.body;
+
+    if (!domain && !storyType && !gateTag) {
+      return res.status(400).json({
+        error: 'At least one of domain, storyType, or gateTag is required'
+      });
+    }
+
+    let query = 'DELETE FROM user_suppressed_prompts WHERE user_id = $1';
+    const params = [userId];
+    let paramIndex = 2;
+
+    if (domain) {
+      query += ` AND domain = $${paramIndex}`;
+      params.push(domain);
+      paramIndex++;
+    }
+
+    if (storyType) {
+      query += ` AND story_type = $${paramIndex}`;
+      params.push(storyType);
+      paramIndex++;
+    }
+
+    if (gateTag) {
+      query += ` AND gate_tag = $${paramIndex}`;
+      params.push(gateTag);
+    }
+
+    await pool.query(query, params);
+
+    res.json({
+      success: true,
+      message: 'Content re-enabled'
+    });
+  } catch (error) {
+    console.error('Unsuppress error:', error);
+    res.status(500).json({ error: 'Failed to unsuppress content' });
+  }
+});
+
+// ============================================================================
 
 // Get user stats
 app.get('/api/user/stats', authenticateToken, async (req, res) => {
@@ -1311,26 +2932,28 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     );
 
     // Current streak (consecutive days from today backwards)
+    // SPEC REQUIREMENT: Only count daily prompts (is_daily = TRUE), not bonus prompts
     const streakResult = await pool.query(
       `WITH RECURSIVE date_series AS (
         -- Get all unique dates user has responded (in user's timezone)
+        -- Only count daily prompts, not bonus prompts or free writes
         SELECT DISTINCT DATE(created_at + INTERVAL '${offsetHours} hours') as response_date
         FROM prompt_responses
-        WHERE user_id = $1
+        WHERE user_id = $1 AND response_type IN ('daily', 'submitted')
         ORDER BY response_date DESC
       ),
       streak_counter AS (
         -- Start from today or most recent response
-        SELECT 
+        SELECT
           response_date,
           1 as streak_day
         FROM date_series
-        WHERE response_date = CURRENT_DATE + INTERVAL '${offsetHours} hours'
-        
+        WHERE response_date = DATE(CURRENT_TIMESTAMP + INTERVAL '${offsetHours} hours')
+
         UNION ALL
-        
+
         -- Recursively check previous days
-        SELECT 
+        SELECT
           ds.response_date,
           sc.streak_day + 1
         FROM date_series ds
@@ -1536,12 +3159,340 @@ Remember: You are speaking AS this person to their family members or friends. Th
 });
 
 // ============================================================================
+// GATES / LIFE EVENTS ENDPOINTS
+// ============================================================================
+
+// Unlock gates (life events) for a user
+app.post('/api/gates/unlock', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { gateTags } = req.body;
+
+    if (!Array.isArray(gateTags) || gateTags.length === 0) {
+      return res.status(400).json({ error: 'gateTags must be a non-empty array' });
+    }
+
+    // Insert each gate for the user
+    for (const gateTag of gateTags) {
+      await pool.query(
+        `INSERT INTO user_unlocked_gates (user_id, gate_tag, current_arc_step)
+         VALUES ($1, $2, 0)
+         ON CONFLICT (user_id, gate_tag) DO NOTHING`,
+        [userId, gateTag]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Unlocked ${gateTags.length} life events`,
+      unlockedGates: gateTags
+    });
+  } catch (error) {
+    console.error('Unlock gates error:', error);
+    res.status(500).json({ error: 'Failed to unlock gates' });
+  }
+});
+
+// Get user's unlocked gates
+app.get('/api/gates/unlocked', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      'SELECT gate_tag, current_arc_step, unlocked_at FROM user_unlocked_gates WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({
+      gates: result.rows
+    });
+  } catch (error) {
+    console.error('Get unlocked gates error:', error);
+    res.status(500).json({ error: 'Failed to get unlocked gates' });
+  }
+});
+
+// ============================================================================
+// PUSH NOTIFICATIONS
+// ============================================================================
+
+// Register device token for push notifications
+app.post('/api/notifications/register-token', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { deviceToken, deviceType, deviceId } = req.body;
+
+    if (!deviceToken || !deviceType) {
+      return res.status(400).json({ error: 'deviceToken and deviceType are required' });
+    }
+
+    if (!['ios', 'android'].includes(deviceType)) {
+      return res.status(400).json({ error: 'deviceType must be ios or android' });
+    }
+
+    // Insert or update device token
+    const result = await pool.query(
+      `INSERT INTO push_tokens (user_id, device_token, device_type, device_id, last_used_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (user_id, device_id)
+       DO UPDATE SET
+         device_token = EXCLUDED.device_token,
+         device_type = EXCLUDED.device_type,
+         is_active = TRUE,
+         last_used_at = NOW(),
+         updated_at = NOW()
+       RETURNING *`,
+      [userId, deviceToken, deviceType, deviceId || deviceToken]
+    );
+
+    console.log(`✅ Registered push token for user ${userId} (${deviceType})`);
+
+    res.json({
+      success: true,
+      token: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Register token error:', error);
+    res.status(500).json({ error: 'Failed to register device token' });
+  }
+});
+
+// Unregister device token
+app.post('/api/notifications/unregister-token', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { deviceToken } = req.body;
+
+    await pool.query(
+      `UPDATE push_tokens
+       SET is_active = FALSE, updated_at = NOW()
+       WHERE user_id = $1 AND device_token = $2`,
+      [userId, deviceToken]
+    );
+
+    console.log(`✅ Unregistered push token for user ${userId}`);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unregister token error:', error);
+    res.status(500).json({ error: 'Failed to unregister device token' });
+  }
+});
+
+// Get notification preferences
+app.get('/api/notifications/preferences', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT * FROM notification_preferences WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      // Create default preferences if none exist
+      const insertResult = await pool.query(
+        `INSERT INTO notification_preferences (user_id)
+         VALUES ($1)
+         RETURNING *`,
+        [userId]
+      );
+      return res.json(insertResult.rows[0]);
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get preferences error:', error);
+    res.status(500).json({ error: 'Failed to get notification preferences' });
+  }
+});
+
+// Update notification preferences
+app.put('/api/notifications/preferences', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const {
+      daily_prompt_enabled,
+      daily_prompt_time,
+      family_questions_enabled,
+      responses_received_enabled,
+      streak_reminders_enabled,
+      streak_reminder_time,
+      weekly_summary_enabled,
+      weekly_summary_day,
+      notifications_enabled
+    } = req.body;
+
+    // Check if preferences exist, create if not
+    const checkResult = await pool.query(
+      `SELECT * FROM notification_preferences WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      // Create default preferences first
+      await pool.query(
+        `INSERT INTO notification_preferences (user_id) VALUES ($1)`,
+        [userId]
+      );
+    }
+
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [userId];
+    let paramIndex = 2;
+
+    if (typeof daily_prompt_enabled !== 'undefined') {
+      updates.push(`daily_prompt_enabled = $${paramIndex++}`);
+      values.push(daily_prompt_enabled);
+    }
+    if (daily_prompt_time) {
+      updates.push(`daily_prompt_time = $${paramIndex++}`);
+      values.push(daily_prompt_time);
+    }
+    if (typeof family_questions_enabled !== 'undefined') {
+      updates.push(`family_questions_enabled = $${paramIndex++}`);
+      values.push(family_questions_enabled);
+    }
+    if (typeof responses_received_enabled !== 'undefined') {
+      updates.push(`responses_received_enabled = $${paramIndex++}`);
+      values.push(responses_received_enabled);
+    }
+    if (typeof streak_reminders_enabled !== 'undefined') {
+      updates.push(`streak_reminders_enabled = $${paramIndex++}`);
+      values.push(streak_reminders_enabled);
+    }
+    if (streak_reminder_time) {
+      updates.push(`streak_reminder_time = $${paramIndex++}`);
+      values.push(streak_reminder_time);
+    }
+    if (typeof weekly_summary_enabled !== 'undefined') {
+      updates.push(`weekly_summary_enabled = $${paramIndex++}`);
+      values.push(weekly_summary_enabled);
+    }
+    if (typeof weekly_summary_day !== 'undefined') {
+      updates.push(`weekly_summary_day = $${paramIndex++}`);
+      values.push(weekly_summary_day);
+    }
+    if (typeof notifications_enabled !== 'undefined') {
+      updates.push(`notifications_enabled = $${paramIndex++}`);
+      values.push(notifications_enabled);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push('updated_at = NOW()');
+
+    const result = await pool.query(
+      `UPDATE notification_preferences
+       SET ${updates.join(', ')}
+       WHERE user_id = $1
+       RETURNING *`,
+      values
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({ error: 'Failed to update notification preferences' });
+  }
+});
+
+// Test endpoint to send a push notification
+app.post('/api/notifications/test', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { title = 'Test Notification', body = 'This is a test' } = req.body;
+
+    // Get user's device tokens
+    const tokensResult = await pool.query(
+      `SELECT device_token, device_type FROM push_tokens
+       WHERE user_id = $1 AND is_active = TRUE`,
+      [userId]
+    );
+
+    if (tokensResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No active device tokens found' });
+    }
+
+    // Send notification (implementation depends on having FCM server key)
+    const notifications = tokensResult.rows.map(row => ({
+      token: row.device_token,
+      type: row.device_type
+    }));
+
+    console.log(`📨 Would send test notification to ${notifications.length} device(s)`);
+    console.log('Title:', title);
+    console.log('Body:', body);
+
+    res.json({
+      success: true,
+      message: `Notification queued for ${notifications.length} device(s)`,
+      devices: notifications
+    });
+  } catch (error) {
+    console.error('Test notification error:', error);
+    res.status(500).json({ error: 'Failed to send test notification' });
+  }
+});
+
+// Trigger daily prompt reminders (to be called by cron job)
+// POST /api/notifications/send-daily-reminders
+app.post('/api/notifications/send-daily-reminders', async (req, res) => {
+  try {
+    // Simple API key authentication for cron jobs
+    const apiKey = req.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== process.env.CRON_API_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await sendDailyPromptReminders(pool);
+
+    res.json({
+      success: true,
+      message: 'Daily prompt reminders sent'
+    });
+  } catch (error) {
+    console.error('Daily reminder error:', error);
+    res.status(500).json({ error: 'Failed to send daily reminders' });
+  }
+});
+
+// ============================================================================
 // ERROR HANDLING
 // ============================================================================
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// DEBUG ENDPOINT - REMOVE AFTER TESTING
+app.get('/api/debug/response-files/:responseId', authenticateToken, async (req, res) => {
+  try {
+    const { responseId } = req.params;
+
+    const result = await pool.query(
+      `SELECT rf.*, uf.filename, uf.file_path, uf.file_type
+       FROM response_files rf
+       LEFT JOIN user_files uf ON rf.file_id = uf.id
+       WHERE rf.response_id = $1
+       ORDER BY rf.display_order`,
+      [responseId]
+    );
+
+    res.json({
+      responseId,
+      fileCount: result.rows.length,
+      files: result.rows
+    });
+  } catch (error) {
+    console.error('Debug query error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Start server

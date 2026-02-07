@@ -14,7 +14,8 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'ForeverStoriesMobile' do
+target 'Forever Stories ' do
+  use_modular_headers!
   config = use_native_modules!
 
   use_react_native!(
@@ -30,5 +31,13 @@ target 'ForeverStoriesMobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix for module errors
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Allow non-modular includes in framework modules
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
   end
 end

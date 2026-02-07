@@ -1,4 +1,10 @@
 {
   "name": "ForeverStoriesMobile",
-  "displayName": "ForeverStoriesMobile"
+  "displayName": "ForeverStoriesMobile",
+  "android": {
+    "package": "com.anonymous.foreverstoriesmobile"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.foreverstoriesmobile"
+  }
 }

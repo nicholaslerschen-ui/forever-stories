@@ -123,13 +123,13 @@ export default function AccountScreen({ navigation }) {
         </View>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate('ManageFamily')}
+          onPress={() => navigation.navigate('FamilyAccess')}
         >
-          <Text style={styles.cardTitle}>Manage Access</Text>
+          <Text style={styles.cardTitle}>Family Access</Text>
           <Text style={styles.cardSubtitle}>
-            Control who can view your stories and submit questions
+            Invite family members and manage who can view your stories
           </Text>
-          <Text style={styles.cardLink}>View all →</Text>
+          <Text style={styles.cardLink}>Manage access →</Text>
         </TouchableOpacity>
       </View>
 
@@ -150,6 +150,32 @@ export default function AccountScreen({ navigation }) {
             Questions will appear as daily prompts
           </Text>
           <Text style={styles.cardLink}>View all →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Settings Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Settings</Text>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('NotificationSettings')}
+        >
+          <Text style={styles.cardTitle}>🔔 Notification Settings</Text>
+          <Text style={styles.cardSubtitle}>
+            Manage which notifications you receive
+          </Text>
+          <Text style={styles.cardLink}>Configure →</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.card, styles.cardSpacing]}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Text style={styles.cardTitle}>App Settings</Text>
+          <Text style={styles.cardSubtitle}>
+            Adjust text size and share the app
+          </Text>
+          <Text style={styles.cardLink}>Open settings →</Text>
         </TouchableOpacity>
       </View>
 
@@ -277,5 +303,8 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
+  },
+  cardSpacing: {
+    marginTop: 15,
   },
 });
