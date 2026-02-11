@@ -173,7 +173,7 @@ async function sendInviteSMS(recipientPhone, inviteCode, ownerName) {
     return;
   }
 
-  const message = `${ownerName} has invited you to Forever Stories!\n\nYour invite code: ${inviteCode}\n\nDownload the app and enter this code to view their stories and ask questions.\n\nExpires in 30 days.`;
+  const message = `${ownerName} has invited you to Forever Stories!\n\nYour invite code: ${inviteCode}\n\nDownload the app and enter this code to view their stories and ask questions.\n\nExpires in 30 days. Reply STOP to opt out.`;
 
   await twilioClient.messages.create({
     body: message,
