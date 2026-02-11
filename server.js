@@ -10,6 +10,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
+const cron = require('node-cron');
 require('dotenv').config();
 
 // Import prompt selection engine
@@ -21,6 +22,7 @@ const {
   sendResponseReceivedNotification,
   sendInviteNotification,
   sendDailyPromptReminders,
+  sendWeeklyViewerReminders,
   resetNotificationCooldown
 } = require('./pushNotificationService');
 
@@ -2057,6 +2059,25 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
       }
     }
 
+    // Increment arc step if this was a gated prompt
+    if (promptId) {
+      const promptInfo = await pool.query(
+        'SELECT requires_gate, gate_tag FROM prompts WHERE id = $1',
+        [promptId]
+      );
+
+      if (promptInfo.rows.length > 0 && promptInfo.rows[0].requires_gate) {
+        const gateTag = promptInfo.rows[0].gate_tag;
+        await pool.query(
+          `UPDATE user_unlocked_gates
+           SET current_arc_step = current_arc_step + 1
+           WHERE user_id = $1 AND gate_tag = $2`,
+          [userId, gateTag]
+        );
+        console.log(`Advanced arc step for gate: ${gateTag}`);
+      }
+    }
+
     // Calculate streak
     const streakResult = await pool.query(
       `SELECT COUNT(DISTINCT DATE(created_at)) as streak
@@ -2169,8 +2190,8 @@ Format your response as a JSON array of strings. Example:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
+        model: 'claude-haiku-4-20250514',
+        max_tokens: 300,
         system: systemPrompt,
         messages: [
           {
@@ -2618,6 +2639,11 @@ app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const { promptId, skipReason } = req.body;
 
+    console.log('=== SKIP PROMPT REQUEST ===');
+    console.log('User:', userId);
+    console.log('PromptId:', promptId);
+    console.log('Skip reason:', skipReason);
+
     if (!promptId) {
       return res.status(400).json({ error: 'promptId is required' });
     }
@@ -2647,8 +2673,16 @@ app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
 
     // Record skip in history
     const promptResult = await pool.query('SELECT * FROM prompts WHERE id = $1', [promptId]);
+    console.log('Prompt lookup result:', promptResult.rows.length, 'rows');
     if (promptResult.rows.length > 0) {
       const prompt = promptResult.rows[0];
+      console.log('Prompt found:', {
+        id: prompt.id,
+        domain: prompt.domain,
+        story_type: prompt.story_type,
+        depth: prompt.depth,
+        emotional_weight: prompt.emotional_weight
+      });
       await pool.query(
         `INSERT INTO user_prompt_history
          (user_id, prompt_id, action, skip_reason, domain, story_type, depth, gate_tag)
@@ -2658,6 +2692,13 @@ app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
 
       // Update affinity if skip reason provided
       if (skipReason) {
+        console.log('Calling update_affinity_from_skip with:', {
+          userId,
+          domain: prompt.domain,
+          story_type: prompt.story_type,
+          depth: prompt.depth,
+          skipReason
+        });
         await pool.query(
           'SELECT update_affinity_from_skip($1, $2, $3, $4, $5)',
           [userId, prompt.domain, prompt.story_type, prompt.depth, skipReason]
@@ -2729,7 +2770,12 @@ app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Skip prompt error:', error);
-    res.status(500).json({ error: 'Failed to skip prompt' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Failed to skip prompt',
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
@@ -2917,13 +2963,24 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     );
     const userTimezone = userProfile.rows[0]?.timezone || 'America/Phoenix';
 
-    // Calculate timezone offset
-    const now = new Date();
-    const localDateStr = now.toLocaleString('en-US', { timeZone: userTimezone, hour12: false });
-    const utcDateStr = now.toLocaleString('en-US', { timeZone: 'UTC', hour12: false });
-    const localTime = new Date(localDateStr);
-    const utcTime = new Date(utcDateStr);
-    const offsetHours = (localTime - utcTime) / (1000 * 60 * 60);
+    // Calculate timezone offset with error handling
+    let offsetHours = 0;
+    try {
+      const now = new Date();
+      const localDateStr = now.toLocaleString('en-US', { timeZone: userTimezone, hour12: false });
+      const utcDateStr = now.toLocaleString('en-US', { timeZone: 'UTC', hour12: false });
+      const localTime = new Date(localDateStr);
+      const utcTime = new Date(utcDateStr);
+      const calculatedOffset = (localTime - utcTime) / (1000 * 60 * 60);
+
+      // Ensure offset is a valid number
+      if (!isNaN(calculatedOffset) && isFinite(calculatedOffset)) {
+        offsetHours = calculatedOffset;
+      }
+    } catch (error) {
+      console.error('Timezone offset calculation error:', error);
+      offsetHours = 0; // Default to UTC if calculation fails
+    }
 
     // Total responses
     const totalResult = await pool.query(
@@ -3001,7 +3058,7 @@ app.post('/api/ai/persona', authenticateToken, async (req, res) => {
 
     // Get all user's story responses
     const responsesResult = await pool.query(
-      `SELECT pr.response_text, pr.prompt_text, p.question, p.category
+      `SELECT pr.response_text, pr.prompt_text, p.prompt_text as question, p.domain
        FROM prompt_responses pr
        LEFT JOIN prompts p ON pr.prompt_id = p.id
        WHERE pr.user_id = $1
@@ -3320,7 +3377,8 @@ app.put('/api/notifications/preferences', authenticateToken, async (req, res) =>
       streak_reminder_time,
       weekly_summary_enabled,
       weekly_summary_day,
-      notifications_enabled
+      notifications_enabled,
+      invites_enabled
     } = req.body;
 
     // Check if preferences exist, create if not
@@ -3377,6 +3435,10 @@ app.put('/api/notifications/preferences', authenticateToken, async (req, res) =>
     if (typeof notifications_enabled !== 'undefined') {
       updates.push(`notifications_enabled = $${paramIndex++}`);
       values.push(notifications_enabled);
+    }
+    if (typeof invites_enabled !== 'undefined') {
+      updates.push(`invites_enabled = $${paramIndex++}`);
+      values.push(invites_enabled);
     }
 
     if (updates.length === 0) {
@@ -3461,6 +3523,29 @@ app.post('/api/notifications/send-daily-reminders', async (req, res) => {
   }
 });
 
+// Trigger weekly viewer reminders (to be called by cron job once per week)
+// POST /api/notifications/send-weekly-viewer-reminders
+app.post('/api/notifications/send-weekly-viewer-reminders', async (req, res) => {
+  try {
+    // Simple API key authentication for cron jobs
+    const apiKey = req.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== process.env.CRON_API_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await sendWeeklyViewerReminders(pool);
+
+    res.json({
+      success: true,
+      message: 'Weekly viewer reminders sent'
+    });
+  } catch (error) {
+    console.error('Weekly viewer reminder error:', error);
+    res.status(500).json({ error: 'Failed to send weekly viewer reminders' });
+  }
+});
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
@@ -3508,5 +3593,42 @@ app.listen(PORT, HOST, () => {
   console.log('================================');
   console.log('');
 });
+
+// ============================================================================
+// CRON JOBS - Scheduled Notifications
+// ============================================================================
+
+// Run daily prompt reminders every day at 8:00 PM
+// Users who haven't responded get reminded (with cooldown logic)
+cron.schedule('0 20 * * *', async () => {
+  console.log('⏰ Running daily prompt reminders...');
+  try {
+    await sendDailyPromptReminders(pool);
+    console.log('✅ Daily prompt reminders sent successfully');
+  } catch (error) {
+    console.error('❌ Failed to send daily prompt reminders:', error);
+  }
+}, {
+  timezone: "America/Phoenix"
+});
+
+// Run weekly viewer reminders every Sunday at 10:00 AM
+// Reminds viewers to ask questions if they haven't in 7+ days
+cron.schedule('0 10 * * 0', async () => {
+  console.log('⏰ Running weekly viewer reminders...');
+  try {
+    await sendWeeklyViewerReminders(pool);
+    console.log('✅ Weekly viewer reminders sent successfully');
+  } catch (error) {
+    console.error('❌ Failed to send weekly viewer reminders:', error);
+  }
+}, {
+  timezone: "America/Phoenix"
+});
+
+console.log('📅 Cron Jobs Initialized:');
+console.log('   • Daily Prompt Reminders: 8:00 PM daily');
+console.log('   • Weekly Viewer Reminders: 10:00 AM every Sunday');
+console.log('');
 
 module.exports = app;
