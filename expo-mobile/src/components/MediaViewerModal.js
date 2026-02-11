@@ -33,9 +33,12 @@ export default function MediaViewerModal({ visible, files, initialIndex = 0, onC
         staysActiveInBackground: false,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
+        interruptionModeIOS: 1, // DoNotMix
+        interruptionModeAndroid: 1, // DoNotMix
       });
+      console.log('✅ Audio mode configured for video playback');
     } catch (error) {
-      console.error('Failed to configure audio:', error);
+      console.error('❌ Failed to configure audio:', error);
     }
   };
 
@@ -87,6 +90,8 @@ export default function MediaViewerModal({ visible, files, initialIndex = 0, onC
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={false}
               isLooping={false}
+              isMuted={false}
+              volume={1.0}
             />
           ) : (
             <ScrollView

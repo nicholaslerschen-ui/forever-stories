@@ -114,12 +114,13 @@ class ApiService {
     return { story: data.response };
   }
 
-  async updateStory(token, storyId, responseText, fileIds = null) {
+  async updateStory(token, storyId, responseText, title = null, fileIds = null) {
     const response = await fetch(`${API_URL}/api/prompts/response/${storyId}`, {
       method: 'PUT',
       headers: getHeaders(token),
       body: JSON.stringify({
         response: responseText,
+        title,
         fileIds,
       }),
     });

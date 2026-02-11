@@ -2037,10 +2037,10 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 
     // Save initial response
     const result = await pool.query(
-      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, title, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [userId, promptId, promptText, response, responseType]
+      [userId, promptId, promptText, response, responseType, title || null]
     );
 
     const responseId = result.rows[0].id;
@@ -2393,9 +2393,10 @@ app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res)
   try {
     const userId = req.user.userId;
     const { responseId } = req.params;
-    const { response, fileIds } = req.body;
+    const { response, title, fileIds } = req.body;
 
     console.log('UPDATE STORY - Response ID:', responseId);
+    console.log('UPDATE STORY - Title:', title);
     console.log('UPDATE STORY - Received fileIds:', fileIds);
 
     if (!response || response.trim() === '') {
@@ -2412,13 +2413,13 @@ app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res)
       return res.status(404).json({ error: 'Story not found' });
     }
 
-    // Update the response text
+    // Update the response text and title
     const result = await pool.query(
       `UPDATE prompt_responses
-       SET response_text = $1
-       WHERE id = $2 AND user_id = $3
+       SET response_text = $1, title = $2
+       WHERE id = $3 AND user_id = $4
        RETURNING *`,
-      [response.trim(), responseId, userId]
+      [response.trim(), title || null, responseId, userId]
     );
 
     // Handle file updates if fileIds provided

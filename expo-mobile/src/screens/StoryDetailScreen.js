@@ -23,6 +23,7 @@ export default function StoryDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState('');
+  const [editedTitle, setEditedTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -77,6 +78,7 @@ export default function StoryDetailScreen({ route, navigation }) {
 
   const handleEdit = () => {
     setEditedText(story.response_text);
+    setEditedTitle(story.title || '');
     setExistingFiles(story.files || []); // Copy existing files
     setSelectedMedia([]); // Reset new media
     setIsEditing(true);
@@ -121,7 +123,7 @@ export default function StoryDetailScreen({ route, navigation }) {
       console.log('Existing file IDs:', existingFileIds);
       console.log('All file IDs being sent:', allFileIds);
 
-      await ApiService.updateStory(token, storyId, editedText, allFileIds);
+      await ApiService.updateStory(token, storyId, editedText, editedTitle, allFileIds);
       console.log('Story updated, reloading...');
 
       // Reload the story to get updated data with signed URLs
@@ -187,11 +189,20 @@ export default function StoryDetailScreen({ route, navigation }) {
 
       <View style={styles.promptCard}>
         <Text style={[styles.promptLabel, { fontSize: getFontSize(12) }]}>
-          {story.title ? 'Title' : 'Prompt'}
+          {story.title || story.response_type === 'freewrite' ? 'Title' : 'Prompt'}
         </Text>
-        <Text style={[styles.promptText, { fontSize: getFontSize(18) }]}>
-          {story.title || story.prompt_text || story.question || 'Untitled Story'}
-        </Text>
+        {isEditing && (story.title || story.response_type === 'freewrite') ? (
+          <TextInput
+            style={[styles.titleInput, { fontSize: getFontSize(18) }]}
+            value={editedTitle}
+            onChangeText={setEditedTitle}
+            placeholder="Enter title (optional)"
+          />
+        ) : (
+          <Text style={[styles.promptText, { fontSize: getFontSize(18) }]}>
+            {story.title || story.prompt_text || story.question || 'Untitled Story'}
+          </Text>
+        )}
       </View>
 
       <View style={styles.storyCard}>
@@ -428,6 +439,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111',
     lineHeight: 24,
+  },
+  titleInput: {
+    fontSize: 18,
+    color: '#111',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
   },
   storyCard: {
     paddingHorizontal: 20,
