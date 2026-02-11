@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -316,7 +318,11 @@ export default function EditProfileScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -365,7 +371,10 @@ export default function EditProfileScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <View>
@@ -559,7 +568,7 @@ export default function EditProfileScreen({ navigation }) {
         onSelectTimezone={setTimezone}
         currentTimezone={timezone}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
