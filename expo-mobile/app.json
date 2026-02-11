@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Forever Stories",
+    "slug": "forever-stories",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.foreverstories.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Forever Stories needs access to your camera to capture photos and videos for your stories.",
+        "NSPhotoLibraryUsageDescription": "Forever Stories needs access to your photo library to attach photos and videos to your stories.",
+        "NSMicrophoneUsageDescription": "Forever Stories needs microphone access to record videos with audio.",
+        "NSContactsUsageDescription": "Forever Stories needs access to your contacts to easily invite family and friends to the app."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.foreverstories.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "READ_CONTACTS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Forever Stories needs access to your photos to attach them to your stories.",
+          "cameraPermission": "Forever Stories needs access to your camera to take photos for your stories."
+        }
+      ]
+    ]
+  }
+}

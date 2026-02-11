@@ -668,6 +668,123 @@ async function resetNotificationCooldown(pool, userId) {
   }
 }
 
+/**
+ * Send weekly reminder to viewers to submit questions to their family/friends
+ * This should be called by a scheduled job (e.g., cron) once per week
+ * @param {object} pool - PostgreSQL pool
+ */
+async function sendWeeklyViewerReminders(pool) {
+  try {
+    // Find all viewers who:
+    // 1. Are viewers (have role='viewer')
+    // 2. Have access to at least one owner
+    // 3. Haven't submitted a question in the last 7 days
+    const viewersResult = await pool.query(
+      `SELECT DISTINCT u.id, u.full_name
+       FROM users u
+       INNER JOIN access_grants ag ON u.id = ag.viewer_id
+       WHERE u.role = 'viewer'
+       AND ag.is_active = TRUE
+       AND (
+         u.id NOT IN (
+           SELECT submitter_id
+           FROM submitted_questions
+           WHERE created_at > NOW() - INTERVAL '7 days'
+         )
+         OR u.id NOT IN (
+           SELECT submitter_id FROM submitted_questions
+         )
+       )`
+    );
+
+    console.log(`Found ${viewersResult.rows.length} viewers who haven't submitted questions recently`);
+
+    for (const viewer of viewersResult.rows) {
+      await sendViewerReminderNotification(pool, viewer.id, viewer.full_name);
+    }
+
+  } catch (error) {
+    console.error('Error sending weekly viewer reminders:', error);
+  }
+}
+
+/**
+ * Send reminder notification to a specific viewer to ask questions
+ * @param {object} pool - PostgreSQL pool
+ * @param {string} viewerId - Viewer user ID
+ * @param {string} viewerName - Viewer's name
+ */
+async function sendViewerReminderNotification(pool, viewerId, viewerName) {
+  try {
+    // Get viewer's active device tokens
+    const tokensResult = await pool.query(
+      `SELECT device_token FROM push_tokens
+       WHERE user_id = $1 AND is_active = TRUE`,
+      [viewerId]
+    );
+
+    if (tokensResult.rows.length === 0) {
+      return;
+    }
+
+    // Check notification preferences - viewer_reminders_enabled
+    const prefsResult = await pool.query(
+      `SELECT notifications_enabled, viewer_reminders_enabled
+       FROM notification_preferences
+       WHERE user_id = $1`,
+      [viewerId]
+    );
+
+    const prefs = prefsResult.rows[0];
+    if (!prefs || !prefs.notifications_enabled || prefs.viewer_reminders_enabled === false) {
+      console.log(`Viewer reminders disabled for user ${viewerId}`);
+      return;
+    }
+
+    // Get the names of owners they have access to
+    const ownersResult = await pool.query(
+      `SELECT u.full_name
+       FROM users u
+       INNER JOIN access_grants ag ON u.id = ag.owner_id
+       WHERE ag.viewer_id = $1 AND ag.is_active = TRUE
+       LIMIT 3`,
+      [viewerId]
+    );
+
+    const ownerNames = ownersResult.rows.map(r => r.full_name);
+    const ownerText = ownerNames.length === 1
+      ? ownerNames[0]
+      : ownerNames.length === 2
+        ? `${ownerNames[0]} and ${ownerNames[1]}`
+        : `${ownerNames[0]}, ${ownerNames[1]}, and others`;
+
+    const deviceTokens = tokensResult.rows.map(r => r.device_token);
+
+    const notification = {
+      title: "💭 Ask a question",
+      body: `What would you like to know about ${ownerText}? Submit a question for them to answer!`,
+      data: {
+        type: 'viewer_reminder',
+        screen: 'SubmitQuestion'
+      }
+    };
+
+    await sendBulkNotifications(deviceTokens, notification);
+
+    // Log notification
+    await pool.query(
+      `INSERT INTO notification_log (user_id, notification_type, title, body, data)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [viewerId, 'viewer_reminder', notification.title, notification.body, JSON.stringify(notification.data)]
+    );
+
+    console.log(`Sent weekly reminder to viewer ${viewerId} (${viewerName})`);
+
+  } catch (error) {
+    console.error('Error sending viewer reminder notification:', error);
+  }
+}
+
 module.exports = {
   sendFCMNotification,
   sendBulkNotifications,
@@ -678,5 +795,6 @@ module.exports = {
   sendInviteNotification,
   sendDailyPromptReminders,
   sendDailyPromptReminderNotification,
-  resetNotificationCooldown
+  resetNotificationCooldown,
+  sendWeeklyViewerReminders
 };

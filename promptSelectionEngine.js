@@ -63,9 +63,35 @@ async function getNextPrompt(pool, userId, mode = SELECTION_MODE.NORMAL) {
       };
     }
 
-    // 4. Build eligible pool
-    const eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode);
+    // 4. Build eligible pool with progressive filter relaxation
+    // Level 1: Start with strict filters (all defaults: 15-day cooldown, avoid similar, exclude shown today)
+    let eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode);
 
+    // Fallback 1: If no prompts, relax "avoid same story_type/depth" filter
+    if (eligiblePrompts.length === 0) {
+      console.log('No prompts with strict filters, relaxing story_type/depth avoidance...');
+      eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode, { avoidLastSkipped: false });
+    }
+
+    // Fallback 2: If still no prompts, allow prompts shown today
+    if (eligiblePrompts.length === 0) {
+      console.log('No prompts without shown-today filter, allowing re-shown prompts...');
+      eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode, { avoidLastSkipped: false, allowShownToday: true });
+    }
+
+    // Fallback 3: If still no prompts, reduce cooldown from 15 to 7 days
+    if (eligiblePrompts.length === 0) {
+      console.log('No prompts with 15-day cooldown, trying 7-day cooldown...');
+      eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode, { avoidLastSkipped: false, allowShownToday: true, cooldownDays: 7 });
+    }
+
+    // Fallback 4: If still no prompts, reduce cooldown to 3 days
+    if (eligiblePrompts.length === 0) {
+      console.log('No prompts with 7-day cooldown, trying 3-day cooldown...');
+      eligiblePrompts = await buildEligiblePool(pool, userId, dailyStats, mode, { avoidLastSkipped: false, allowShownToday: true, cooldownDays: 3 });
+    }
+
+    // Last resort: Return placeholder only if truly no prompts available
     if (eligiblePrompts.length === 0) {
       return {
         id: null,
@@ -110,7 +136,13 @@ async function getNextPrompt(pool, userId, mode = SELECTION_MODE.NORMAL) {
 /**
  * Build pool of eligible prompts
  */
-async function buildEligiblePool(pool, userId, dailyStats, mode) {
+async function buildEligiblePool(pool, userId, dailyStats, mode, filterOptions = {}) {
+  const {
+    avoidLastSkipped = true,
+    allowShownToday = false,
+    cooldownDays = 15
+  } = filterOptions;
+
   const today = new Date().toISOString().split('T')[0];
 
   // Base query
@@ -134,31 +166,39 @@ async function buildEligiblePool(pool, userId, dailyStats, mode) {
     )
   `;
 
-  // Exclude shown today
-  query += `
-    AND p.id NOT IN (
-      SELECT prompt_id FROM user_prompt_history
-      WHERE user_id = $1 AND DATE(shown_at) = $${paramIndex}
-    )
-  `;
-  params.push(today);
-  paramIndex++;
+  // Exclude shown today (unless allowShownToday is true)
+  if (!allowShownToday) {
+    query += `
+      AND p.id NOT IN (
+        SELECT prompt_id FROM user_prompt_history
+        WHERE user_id = $1 AND DATE(shown_at) = $${paramIndex}
+      )
+    `;
+    params.push(today);
+    paramIndex++;
+  }
 
-  // Apply cooldown (15 days for normal, 30-45 for skipped "not today")
+  // Apply cooldown (configurable days)
   query += `
     AND (p.id NOT IN (
       SELECT prompt_id FROM user_prompt_history
       WHERE user_id = $1
-        AND shown_at > NOW() - INTERVAL '15 days'
+        AND shown_at > NOW() - INTERVAL '${cooldownDays} days'
     ))
   `;
 
-  // Check gate requirements
+  // Check gate requirements and arc step progression
   query += `
     AND (
       p.requires_gate = FALSE
-      OR p.gate_tag IN (
-        SELECT gate_tag FROM user_unlocked_gates WHERE user_id = $1
+      OR (
+        p.gate_tag IN (
+          SELECT gate_tag FROM user_unlocked_gates WHERE user_id = $1
+        )
+        AND p.arc_step = (
+          SELECT current_arc_step FROM user_unlocked_gates
+          WHERE user_id = $1 AND gate_tag = p.gate_tag
+        )
       )
     )
   `;
@@ -187,8 +227,8 @@ async function buildEligiblePool(pool, userId, dailyStats, mode) {
     ))
   `;
 
-  // Apply rescue mode filters
-  if (dailyStats.skip_count >= 1) {
+  // Apply rescue mode filters (unless avoidLastSkipped is false)
+  if (avoidLastSkipped && dailyStats.skip_count >= 1) {
     // Exclude same story_type and depth as last skipped
     if (dailyStats.last_prompt_story_type && dailyStats.last_prompt_depth) {
       query += ` AND NOT (p.story_type = $${paramIndex} AND p.depth = $${paramIndex + 1})`;
@@ -206,7 +246,8 @@ async function buildEligiblePool(pool, userId, dailyStats, mode) {
 
   // Apply mode-specific filters
   if (mode === SELECTION_MODE.RESCUE_LIGHT) {
-    query += ` AND p.depth = 'light'`;
+    // Include both light and medium to avoid empty pools (light will be boosted by weight calculation)
+    query += ` AND p.depth IN ('light', 'medium')`;
   } else if (mode === SELECTION_MODE.RESCUE_THOUGHTFUL) {
     query += ` AND p.depth IN ('light', 'medium')`;
   } else if (mode === SELECTION_MODE.BONUS) {
@@ -285,7 +326,7 @@ function calculateWeight(prompt, affinities, dailyStats, totalResponses = 0) {
   if (totalResponses < 10) {
     // Boost onboarding prompts significantly for new users
     if (prompt.base_weight_category === 'Onboarding' || prompt.base_weight >= 1.5) {
-      weight *= 3.0; // 3x boost for onboarding prompts
+      weight *= 10.0; // 10x boost for onboarding prompts (ensures ~90% onboarding for new users)
     }
 
     // Heavily penalize gated arc prompts for new users
@@ -301,7 +342,7 @@ function calculateWeight(prompt, affinities, dailyStats, totalResponses = 0) {
   } else if (totalResponses < 20) {
     // Gradual transition: still slightly favor onboarding for users with 10-19 responses
     if (prompt.base_weight_category === 'Onboarding' || prompt.base_weight >= 1.5) {
-      weight *= 1.5; // Smaller boost as users get more experienced
+      weight *= 3.0; // Smaller boost as users get more experienced
     }
 
     // Smaller penalty for arc prompts during transition period
@@ -563,6 +604,8 @@ async function onRating(pool, userId, promptId, responseId, rating) {
   );
 
   const prompt = promptResult.rows.length > 0 ? promptResult.rows[0] : null;
+  console.log('📝 Rating prompt:', promptId);
+  console.log('📝 Prompt data:', prompt ? { id: prompt.id, domain: prompt.domain, story_type: prompt.story_type, depth: prompt.depth } : 'NOT FOUND');
 
   // Save rating
   await pool.query(`
@@ -574,10 +617,27 @@ async function onRating(pool, userId, promptId, responseId, rating) {
 
   // Update affinity only for regular prompts (not submitted questions)
   if (prompt && prompt.domain && prompt.story_type && prompt.depth) {
-    await pool.query(
-      'SELECT update_affinity_from_rating($1, $2, $3, $4, $5)',
-      [userId, prompt.domain, prompt.story_type, prompt.depth, rating]
-    );
+    console.log('🎯 Updating affinity with:', {
+      userId,
+      domain: prompt.domain,
+      story_type: prompt.story_type,
+      depth: prompt.depth,
+      rating
+    });
+
+    // Calculate affinity delta based on rating
+    const delta = rating === 3 ? 0.20 : rating === 2 ? 0.05 : rating === 1 ? -0.20 : 0.0;
+
+    // Update affinity directly (bypassing stored function to avoid caching issues)
+    await pool.query(`
+      INSERT INTO user_prompt_affinity (user_id, domain, story_type, depth, affinity_score, update_count)
+      VALUES ($1, $2, $3, $4, $5, 1)
+      ON CONFLICT (user_id, domain, story_type, depth)
+      DO UPDATE SET
+        affinity_score = GREATEST(-1.0, LEAST(1.0, user_prompt_affinity.affinity_score + $5)),
+        update_count = user_prompt_affinity.update_count + 1,
+        last_updated = NOW()
+    `, [userId, prompt.domain, prompt.story_type, prompt.depth, delta]);
   }
 
   return { success: true, message: 'Thank you for your feedback!' };

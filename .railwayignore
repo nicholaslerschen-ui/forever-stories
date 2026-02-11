@@ -1,0 +1,27 @@
+# Railway Ignore - Don't deploy these files
+
+node_modules/
+*.log
+.env.local
+.DS_Store
+test*.js
+check*.js
+
+# Mobile app (deploy separately)
+mobile/
+expo-mobile/
+
+# Documentation
+*.md
+!README.md
+
+# Backups
+Backups/
+
+# Git
+.git/
+.gitignore
+
+# Development
+scratch/
+scratchpad/

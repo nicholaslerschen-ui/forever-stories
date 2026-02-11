@@ -1,0 +1,1396 @@
+⚠️  Email service not configured (EMAIL_USER/EMAIL_PASSWORD missing)
+⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
+📊 Using PostgreSQL database
+
+🎉 Forever Stories API Server
+================================
+🚀 Server running on port 3001
+📝 Environment: development
+🔗 Health check: http://localhost:3001/health
+📅 Daily Prompts: ENABLED
+🤖 AI Persona: ENABLED
+================================
+
+✅ Database connected successfully
+=== GET TODAY PROMPT ===
+User ID: e5036c87-6b0d-48e0-9617-056a4a05e709
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:50:14.741Z
+=== GET TODAY PROMPT ===
+User ID: e5036c87-6b0d-48e0-9617-056a4a05e709
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:50:14.743Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: e5036c87-6b0d-48e0-9617-056a4a05e709
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:51:34.006Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: e5036c87-6b0d-48e0-9617-056a4a05e709
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:52:01.702Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:52:24.476Z
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:52:24.480Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T16:52:29.311Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== SKIP PROMPT REQUEST ===
+User: f4cc3850-eed0-4680-9dd5-301dc1867c05
+PromptId: Legacy_Advice_3
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Legacy_Advice_3',
+  domain: 'Legacy & Continuity',
+  story_type: 'Advice & Transmission',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f4cc3850-eed0-4680-9dd5-301dc1867c05',
+  domain: 'Legacy & Continuity',
+  story_type: 'Advice & Transmission',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Skip prompt error: error: null value in column "domain" of relation "user_prompt_affinity" violates not-null constraint
+    at /Users/admin/Desktop/forever-stories/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async /Users/admin/Desktop/forever-stories/server.js:2681:9 {
+  length: 981,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (b80ff3e7-0535-4cd1-9134-e6f846a2370c, f4cc3850-eed0-4680-9dd5-301dc1867c05, null, Advice & Transmission, null, -0.40, 2026-02-08 16:52:34.968346+00, 1).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'SQL statement "INSERT INTO user_prompt_affinity (user_id, domain, story_type, depth, affinity_score, update_count)\n' +
+    '        VALUES (p_user_id, NULL, p_story_type, NULL, v_delta, 1)\n' +
+    '        ON CONFLICT (user_id, domain, story_type, depth)\n' +
+    '        DO UPDATE SET\n' +
+    '            affinity_score = GREATEST(-1.0, LEAST(1.0, user_prompt_affinity.affinity_score + v_delta)),\n' +
+    '            update_count = user_prompt_affinity.update_count + 1,\n' +
+    '            last_updated = NOW()"\n' +
+    'PL/pgSQL function update_affinity_from_skip(uuid,character varying,character varying,character varying,character varying) line 23 at SQL statement',
+  schema: 'public',
+  table: 'user_prompt_affinity',
+  column: 'domain',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '1981',
+  routine: 'ExecConstraints'
+}
+Error stack: error: null value in column "domain" of relation "user_prompt_affinity" violates not-null constraint
+    at /Users/admin/Desktop/forever-stories/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async /Users/admin/Desktop/forever-stories/server.js:2681:9
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:01:26.316Z
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:01:26.317Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:01:41.428Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== SKIP PROMPT REQUEST ===
+User: f4cc3850-eed0-4680-9dd5-301dc1867c05
+PromptId: Identity_Reflection_5
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Identity_Reflection_5',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  emotional_weight: 'High'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f4cc3850-eed0-4680-9dd5-301dc1867c05',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: f4cc3850-eed0-4680-9dd5-301dc1867c05
+=== SKIP PROMPT REQUEST ===
+User: f4cc3850-eed0-4680-9dd5-301dc1867c05
+PromptId: Joy_Surprise_1
+Skip reason: similar_answered
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Joy_Surprise_1',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f4cc3850-eed0-4680-9dd5-301dc1867c05',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  skipReason: 'similar_answered'
+}
+Marked onboarding complete after skip for user: f4cc3850-eed0-4680-9dd5-301dc1867c05
+=== SKIP PROMPT REQUEST ===
+User: f4cc3850-eed0-4680-9dd5-301dc1867c05
+PromptId: Relationships_Surprise_2
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Relationships_Surprise_2',
+  domain: 'Relationships & Love',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f4cc3850-eed0-4680-9dd5-301dc1867c05',
+  domain: 'Relationships & Love',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: f4cc3850-eed0-4680-9dd5-301dc1867c05
+=== GET TODAY PROMPT ===
+User ID: 103431b1-8df5-41c2-bec0-d5d5a4ef8cd0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:21:45.211Z
+=== GET TODAY PROMPT ===
+User ID: 103431b1-8df5-41c2-bec0-d5d5a4ef8cd0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:21:45.213Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 103431b1-8df5-41c2-bec0-d5d5a4ef8cd0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:21:51.266Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 103431b1-8df5-41c2-bec0-d5d5a4ef8cd0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:21:54.077Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:22:14.294Z
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:22:14.299Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:22:17.716Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:22:38.672Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:23:00.855Z
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:23:00.857Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T17:23:05.459Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Identity_Reflection_5
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Identity_Reflection_5',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  emotional_weight: 'High'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Relationships_Everyday_5
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Relationships_Everyday_5',
+  domain: 'Relationships & Love',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Relationships & Love',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Work_Reflection_4
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Work_Reflection_4',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Origins_Love_3
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Origins_Love_3',
+  domain: 'Origins & Early Formation',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Origins & Early Formation',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Joy_Humor_18
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Joy_Humor_18',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Identity_Advice_1
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Identity_Advice_1',
+  domain: 'Identity & Inner World',
+  story_type: 'Advice & Transmission',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Identity & Inner World',
+  story_type: 'Advice & Transmission',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Origins_Surprise_1
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Origins_Surprise_1',
+  domain: 'Origins & Early Formation',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Origins & Early Formation',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Work_Reflection_3
+Skip reason: similar_answered
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Work_Reflection_3',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  skipReason: 'similar_answered'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Origins_Everyday_4
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Origins_Everyday_4',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Relationships_Humor_8
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Relationships_Humor_8',
+  domain: 'Relationships & Love',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Relationships & Love',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Joy_Love_1
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Joy_Love_1',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Identity_Reflection_7
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Identity_Reflection_7',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Identity & Inner World',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Origins_Everyday_1
+Skip reason: not_relevant
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Origins_Everyday_1',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'not_relevant'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SKIP PROMPT REQUEST ===
+User: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+PromptId: Work_Everyday_1
+Skip reason: similar_answered
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Work_Everyday_1',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Work, Craft & Purpose',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'similar_answered'
+}
+Marked onboarding complete after skip for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== SAVE RESPONSE ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+Prompt ID: Identity_Humor_2
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: 7321b2e7-2259-4d07-8cbb-d657741f5f87
+Response type: daily
+Created at (UTC): 2026-02-08T19:04:44.851Z
+Marked onboarding complete for user: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+Reset notification cooldown for user a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+📝 Rating prompt: Identity_Humor_2
+📝 Prompt data: {
+  id: 'Identity_Humor_2',
+  domain: 'Identity & Inner World',
+  story_type: 'Humor & Lightness',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'a41d2e3b-34ef-41a3-a7e9-af0ae164b231',
+  domain: 'Identity & Inner World',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T19:04:49.372Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-08T19:04:44.851Z
+Response text: Test...
+GET STORY - Response ID: 7321b2e7-2259-4d07-8cbb-d657741f5f87
+GET STORY - Found 0 files
+UPDATE STORY - Response ID: 7321b2e7-2259-4d07-8cbb-d657741f5f87
+UPDATE STORY - Received fileIds: []
+Deleting existing file associations...
+Deleted 0 existing associations
+GET STORY - Response ID: 7321b2e7-2259-4d07-8cbb-d657741f5f87
+GET STORY - Found 0 files
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T19:05:10.841Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-08T19:04:44.851Z
+Response text: Test. Test...
+FILE UPLOAD - User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+FILE UPLOAD - Number of files: 1
+FILE UPLOAD - Processing file: IMG_0001.jpg
+FILE UPLOAD - S3 key: a41d2e3b-34ef-41a3-a7e9-af0ae164b231/40f8ac5bb104665423c756de27280dfd.jpg
+FILE UPLOAD - Saved to DB with ID: bdb58966-f083-4235-843f-969482f94f5b
+FILE UPLOAD - Returning 1 file records
+FILE UPLOAD - File IDs: [ 'bdb58966-f083-4235-843f-969482f94f5b' ]
+=== SAVE RESPONSE ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+Prompt ID: null
+Is Bonus: undefined
+Is Free Write: true
+Submitted Question ID: undefined
+Response saved! ID: 059a4f0a-26b0-4642-9e6d-aaeadcd89f44
+Response type: freewrite
+Created at (UTC): 2026-02-08T19:05:25.231Z
+Reset notification cooldown for user a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T19:05:33.174Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-08T19:05:25.231Z
+Response text: Test...
+GET STORY - Response ID: 059a4f0a-26b0-4642-9e6d-aaeadcd89f44
+GET STORY - Found 1 files
+GET STORY - File IDs: [ 'bdb58966-f083-4235-843f-969482f94f5b' ]
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-08
+Current UTC: 2026-02-08T19:05:40.132Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-08T19:05:25.231Z
+Response text: Test...
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:24:24.159Z
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:24:24.209Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:24:24.612Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:38:07.031Z
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:38:07.032Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: a41d2e3b-34ef-41a3-a7e9-af0ae164b231
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:54:38.889Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Owner13@test.com',
+  password: 'test123',
+  fullName: 'Owner13',
+  role: 'owner'
+}
+📱 SMS not configured, skipping SMS send (invite code: 9KCE8A45 )
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:56:14.847Z
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T17:56:14.850Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T18:06:42.133Z
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T18:06:42.136Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T18:12:50.463Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T19:41:03.403Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:23:34.191Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:23:42.199Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:24:32.291Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:26:11.426Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:33:08.519Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:41:09.456Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:41:37.018Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:41:49.320Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:41:50.041Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== SKIP PROMPT REQUEST ===
+User: d126560b-5659-483a-9aaf-bffa1a0b2f27
+PromptId: Arc_Everyday_3
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Arc_Everyday_3',
+  domain: 'Gate Arc (varies)',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'd126560b-5659-483a-9aaf-bffa1a0b2f27',
+  domain: 'Gate Arc (varies)',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: d126560b-5659-483a-9aaf-bffa1a0b2f27
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:42:45.349Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+📱 SMS not configured, skipping SMS send (invite code: 42EM8T1R )
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:45:17.097Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:46:28.556Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:46:29.527Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:47:18.980Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:47:21.734Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:47:45.156Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:48:11.749Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:54:49.790Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:08.903Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:15.255Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:21.367Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:28.377Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:36.179Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:55:50.525Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:59:21.792Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-09T23:59:24.249Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T00:00:13.110Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T00:00:31.429Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T00:00:32.700Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T00:01:00.909Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: d126560b-5659-483a-9aaf-bffa1a0b2f27
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T00:01:14.688Z
+Has completed onboarding: true
+Answered today query results: 0 rows
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Owner14@test.com',
+  password: 'test123',
+  fullName: 'Owner14',
+  role: 'owner'
+}
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Owner15@test.com',
+  password: 'tets123',
+  fullName: 'Owner15',
+  role: 'owner'
+}
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Owner16@test.com',
+  password: 'test123',
+  fullName: 'Owner16',
+  role: 'owner'
+}
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Owner17@test.com',
+  password: 'test123',
+  fullName: 'Owner17',
+  role: 'owner'
+}
+📱 SMS not configured, skipping SMS send (invite code: UE51KMUQ )
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:51:52.811Z
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:51:52.818Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:52:35.013Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 38ef78f8-37f0-448a-9099-ee472a824764
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:53:05.662Z
+=== GET TODAY PROMPT ===
+User ID: 38ef78f8-37f0-448a-9099-ee472a824764
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:53:05.667Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:53:34.657Z
+=== GET TODAY PROMPT ===
+User ID: f4cc3850-eed0-4680-9dd5-301dc1867c05
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T03:53:34.660Z
+Has completed onboarding: true
+Has completed onboarding: true
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:02:45.162Z
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:02:45.163Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+📧 Email not configured, skipping email send (invite code: PHT245EQ )
+No user found for email kate-bell@mac.com - they'll get notification when they sign up
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:04:04.000Z
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:04:04.005Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: e9813e0c-ffcc-4604-9488-7d477a5d907c
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:12:49.422Z
+=== GET TODAY PROMPT ===
+User ID: e9813e0c-ffcc-4604-9488-7d477a5d907c
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:12:49.423Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:17:03.115Z
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:17:03.118Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+📱 SMS not configured, skipping SMS send (invite code: P3GRAT1K )
+=== GET TODAY PROMPT ===
+User ID: 26b44900-08f5-415d-a06f-c51ce4034408
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:18:58.091Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:40:23.257Z
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-09
+Current UTC: 2026-02-10T04:40:23.260Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T16:15:14.980Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T16:30:26.516Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T16:30:35.044Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T16:30:36.300Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T16:32:15.914Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:35:41.166Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:35:43.014Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+=== SAVE RESPONSE ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Prompt ID: Joy_Humor_8
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: f5ce96a6-b15d-40e5-b63d-be41b2e5b07b
+Response type: daily
+Created at (UTC): 2026-02-10T17:41:19.618Z
+Marked onboarding complete for user: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Reset notification cooldown for user c58c3aec-ed98-4cff-a95c-f3225abe51a4
+📝 Rating prompt: Joy_Humor_8
+📝 Prompt data: {
+  id: 'Joy_Humor_8',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'c58c3aec-ed98-4cff-a95c-f3225abe51a4',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:41:25.356Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:41:19.618Z
+Response text: The smoothly incident of 2017. Ashley spilt a smoo...
+=== SAVE RESPONSE ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Prompt ID: Advice_Reflection_1
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: 1cbd2b60-3dfc-406d-a430-8df6342353c7
+Response type: daily
+Created at (UTC): 2026-02-10T17:42:34.366Z
+Marked onboarding complete for user: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Reset notification cooldown for user c58c3aec-ed98-4cff-a95c-f3225abe51a4
+📝 Rating prompt: Advice_Reflection_1
+📝 Prompt data: {
+  id: 'Advice_Reflection_1',
+  domain: 'Wisdom, Advice & Decision-Making',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'c58c3aec-ed98-4cff-a95c-f3225abe51a4',
+  domain: 'Wisdom, Advice & Decision-Making',
+  story_type: 'Reflection & Meaning-Making',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:42:53.794Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:42:34.366Z
+Response text: Relationships, god, education, health, wealth...
+=== SAVE RESPONSE ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Prompt ID: Relationships_Love_11
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: 4e71bc09-a1e8-4d1a-a994-5f7c3593a4b3
+Response type: daily
+Created at (UTC): 2026-02-10T17:43:06.362Z
+Marked onboarding complete for user: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Reset notification cooldown for user c58c3aec-ed98-4cff-a95c-f3225abe51a4
+📝 Rating prompt: Relationships_Love_11
+📝 Prompt data: {
+  id: 'Relationships_Love_11',
+  domain: 'Relationships & Love',
+  story_type: 'Love & Connection',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'c58c3aec-ed98-4cff-a95c-f3225abe51a4',
+  domain: 'Relationships & Love',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:43:11.250Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:43:06.362Z
+Response text: Ash giving me a second chance...
+=== SAVE RESPONSE ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Prompt ID: Origins_Love_6
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: 4196d27e-99ce-46c1-a631-7bd1f5dd2fe5
+Response type: daily
+Created at (UTC): 2026-02-10T17:44:35.844Z
+Marked onboarding complete for user: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Reset notification cooldown for user c58c3aec-ed98-4cff-a95c-f3225abe51a4
+📝 Rating prompt: Origins_Love_6
+📝 Prompt data: {
+  id: 'Origins_Love_6',
+  domain: 'Origins & Early Formation',
+  story_type: 'Love & Connection',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'c58c3aec-ed98-4cff-a95c-f3225abe51a4',
+  domain: 'Origins & Early Formation',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T17:44:53.891Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:44:35.844Z
+Response text: Barry bonds 700 hr. I made him go get me hot dog a...
+=== SAVE RESPONSE ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Prompt ID: Joy_Surprise_1
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: 196a0e84-b58c-42f7-bb14-362a1ad506dd
+Response type: daily
+Created at (UTC): 2026-02-10T17:46:19.412Z
+Marked onboarding complete for user: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+Reset notification cooldown for user c58c3aec-ed98-4cff-a95c-f3225abe51a4
+📝 Rating prompt: Joy_Surprise_1
+📝 Prompt data: {
+  id: 'Joy_Surprise_1',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'c58c3aec-ed98-4cff-a95c-f3225abe51a4',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Surprise & Turning Points',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T18:29:13.268Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...

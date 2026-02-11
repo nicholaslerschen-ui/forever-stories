@@ -543,7 +543,7 @@ CREATE TABLE IF NOT EXISTS user_prompt_affinity (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
 
     -- Affinity scores (all range from -1.0 to +1.0, default 0.0)
-    domain VARCHAR(50) NOT NULL,
+    domain VARCHAR(50),
     story_type VARCHAR(50),
     depth VARCHAR(20), -- light, medium, heavy
 

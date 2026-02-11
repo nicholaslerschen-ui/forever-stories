@@ -1,6 +1,10 @@
 ⚠️  Email service not configured (EMAIL_USER/EMAIL_PASSWORD missing)
 ⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
 📊 Using PostgreSQL database
+📅 Cron Jobs Initialized:
+   • Daily Prompt Reminders: 8:00 PM daily
+   • Weekly Viewer Reminders: 10:00 AM every Sunday
+
 
 🎉 Forever Stories API Server
 ================================
@@ -12,3 +16,994 @@
 ================================
 
 ✅ Database connected successfully
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T18:55:18.005Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T18:55:42.050Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:23:59.257Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:25:15.404Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:25:36.188Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:26:04.185Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:29:08.169Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:29:15.494Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:29:21.405Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:29:44.067Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:30:04.565Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:30:24.457Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:32:35.526Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:32:42.509Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:33:03.698Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:33:57.940Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:34:04.970Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:34:28.385Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:34:33.132Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:34:57.756Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:03.930Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:13.143Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:19.846Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:26.590Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:32.523Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:41.835Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:46.304Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:51.062Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:35:56.963Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:01.995Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:07.390Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:13.353Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:24.569Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:30.794Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:36.813Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:42.979Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:51.492Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:36:57.078Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:03.613Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:09.805Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:14.223Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:25.856Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:34.268Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:40.099Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:49.512Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:54.883Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:37:59.734Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:04.456Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:09.586Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:15.682Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:24.681Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:29.257Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:36.849Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:42.869Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:47.438Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:52.648Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:38:58.056Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:03.574Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:09.121Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:13.318Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:19.532Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:24.025Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:30.641Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:34.918Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:46.430Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:39:55.833Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:05.537Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:10.638Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:15.992Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:22.791Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:29.646Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:36.302Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:47.472Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:51.277Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:40:59.265Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:04.786Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:11.794Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:24.142Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:29.141Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:34.199Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:38.838Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:43.012Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:41:55.974Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:42:01.059Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:42:07.889Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:42:14.717Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:42:20.659Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:42:27.804Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== GET TODAY PROMPT ===
+User ID: c58c3aec-ed98-4cff-a95c-f3225abe51a4
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:44:07.041Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T17:46:19.412Z
+Response text: Earth quake while we were staying in the amazon th...
+=== SIGNUP REQUEST RECEIVED ===
+Body: {
+  email: 'Ash@test.com',
+  password: 'test123',
+  fullName: 'Ash',
+  role: 'owner'
+}
+📱 SMS not configured, skipping SMS send (invite code: D2IOJTUO )
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:49:58.745Z
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:49:58.750Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+Answered today query results: 0 rows
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:50:23.642Z
+Has completed onboarding: false
+Skipping family questions - user has not completed onboarding
+Answered today query results: 0 rows
+FILE UPLOAD - User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+FILE UPLOAD - Number of files: 1
+FILE UPLOAD - Processing file: IMG_0005.jpg
+FILE UPLOAD - S3 key: f1e8a1b8-336e-4489-b816-844533e3ace0/975a0cec53f64e60a99d3c8edc171719.jpg
+FILE UPLOAD - Saved to DB with ID: a453876c-ae46-4555-ac09-3786587513e5
+FILE UPLOAD - Returning 1 file records
+FILE UPLOAD - File IDs: [ 'a453876c-ae46-4555-ac09-3786587513e5' ]
+=== SAVE RESPONSE ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+Prompt ID: Origins_Everyday_2
+Is Bonus: undefined
+Is Free Write: undefined
+Submitted Question ID: null
+Response saved! ID: d1b56103-0129-4f5e-9c28-6fbbeb18134c
+Response type: daily
+Created at (UTC): 2026-02-10T19:50:58.407Z
+Marked onboarding complete for user: f1e8a1b8-336e-4489-b816-844533e3ace0
+Reset notification cooldown for user f1e8a1b8-336e-4489-b816-844533e3ace0
+📝 Rating prompt: Origins_Everyday_2
+📝 Prompt data: {
+  id: 'Origins_Everyday_2',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium'
+}
+🎯 Updating affinity with: {
+  userId: 'f1e8a1b8-336e-4489-b816-844533e3ace0',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  rating: 3
+}
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:51:11.603Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test...
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:51:21.900Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test...
+=== SKIP PROMPT REQUEST ===
+User: f1e8a1b8-336e-4489-b816-844533e3ace0
+PromptId: Origins_Everyday_4
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Origins_Everyday_4',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f1e8a1b8-336e-4489-b816-844533e3ace0',
+  domain: 'Origins & Early Formation',
+  story_type: 'Everyday Humanity',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: f1e8a1b8-336e-4489-b816-844533e3ace0
+=== SKIP PROMPT REQUEST ===
+User: f1e8a1b8-336e-4489-b816-844533e3ace0
+PromptId: Joy_Humor_10
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Joy_Humor_10',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  emotional_weight: 'Light'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f1e8a1b8-336e-4489-b816-844533e3ace0',
+  domain: 'Joy, Presence & Meaning',
+  story_type: 'Humor & Lightness',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: f1e8a1b8-336e-4489-b816-844533e3ace0
+=== SKIP PROMPT REQUEST ===
+User: f1e8a1b8-336e-4489-b816-844533e3ace0
+PromptId: Relationships_Love_10
+Skip reason: not_today
+Prompt lookup result: 1 rows
+Prompt found: {
+  id: 'Relationships_Love_10',
+  domain: 'Relationships & Love',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  emotional_weight: 'Medium'
+}
+Calling update_affinity_from_skip with: {
+  userId: 'f1e8a1b8-336e-4489-b816-844533e3ace0',
+  domain: 'Relationships & Love',
+  story_type: 'Love & Connection',
+  depth: 'medium',
+  skipReason: 'not_today'
+}
+Marked onboarding complete after skip for user: f1e8a1b8-336e-4489-b816-844533e3ace0
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:52:37.170Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test...
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:52:46.378Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test...
+GET STORY - Response ID: d1b56103-0129-4f5e-9c28-6fbbeb18134c
+GET STORY - Found 1 files
+GET STORY - File IDs: [ 'a453876c-ae46-4555-ac09-3786587513e5' ]
+UPDATE STORY - Response ID: d1b56103-0129-4f5e-9c28-6fbbeb18134c
+UPDATE STORY - Received fileIds: [ 'a453876c-ae46-4555-ac09-3786587513e5' ]
+Deleting existing file associations...
+Deleted 1 existing associations
+Adding 1 new file associations...
+Added file ID: a453876c-ae46-4555-ac09-3786587513e5 at position 0
+GET STORY - Response ID: d1b56103-0129-4f5e-9c28-6fbbeb18134c
+GET STORY - Found 1 files
+GET STORY - File IDs: [ 'a453876c-ae46-4555-ac09-3786587513e5' ]
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:53:07.628Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test. Test...
+=== GET TODAY PROMPT ===
+User ID: f1e8a1b8-336e-4489-b816-844533e3ace0
+User Timezone: America/Phoenix
+Today Date (calculated): 2026-02-10
+Current UTC: 2026-02-10T19:55:09.360Z
+Has completed onboarding: true
+Answered today query results: 1 rows
+Found answer from: 2026-02-10T19:50:58.407Z
+Response text: Test. Test...

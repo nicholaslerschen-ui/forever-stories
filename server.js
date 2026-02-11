@@ -3626,6 +3626,31 @@ cron.schedule('0 10 * * 0', async () => {
   timezone: "America/Phoenix"
 });
 
+// ============================================================================
+// DATABASE MIGRATIONS
+// ============================================================================
+
+// Run migrations on startup
+async function runMigrations() {
+  try {
+    console.log('🔄 Running database migrations...');
+
+    // Add title column to prompt_responses if it doesn't exist
+    await pool.query(`
+      ALTER TABLE prompt_responses
+      ADD COLUMN IF NOT EXISTS title VARCHAR(500);
+    `);
+
+    console.log('✅ Database migrations completed');
+  } catch (error) {
+    console.error('❌ Database migration failed:', error);
+    // Don't crash the server, just log the error
+  }
+}
+
+// Run migrations
+runMigrations();
+
 console.log('📅 Cron Jobs Initialized:');
 console.log('   • Daily Prompt Reminders: 8:00 PM daily');
 console.log('   • Weekly Viewer Reminders: 10:00 AM every Sunday');
