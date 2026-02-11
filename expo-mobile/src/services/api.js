@@ -129,6 +129,16 @@ class ApiService {
     return response.json();
   }
 
+  async deleteStory(token, storyId) {
+    const response = await fetch(`${API_URL}/api/prompts/response/${storyId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token, false),
+    });
+
+    if (!response.ok) throw new Error('Failed to delete story');
+    return response.json();
+  }
+
   async sendAIMessage(token, message, history = []) {
     const response = await fetch(`${API_URL}/api/ai/persona`, {
       method: 'POST',

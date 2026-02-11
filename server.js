@@ -2456,6 +2456,41 @@ app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res)
   }
 });
 
+// Delete a story/response
+app.delete('/api/prompts/response/:responseId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { responseId } = req.params;
+
+    console.log('DELETE STORY - Response ID:', responseId);
+
+    // First check if the story belongs to the user
+    const checkResult = await pool.query(
+      'SELECT id FROM prompt_responses WHERE id = $1 AND user_id = $2',
+      [responseId, userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Story not found or you do not have permission to delete it' });
+    }
+
+    // Delete the story (CASCADE will handle related records)
+    await pool.query(
+      'DELETE FROM prompt_responses WHERE id = $1 AND user_id = $2',
+      [responseId, userId]
+    );
+
+    console.log('Story deleted successfully:', responseId);
+
+    res.json({
+      message: 'Story deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete story error:', error);
+    res.status(500).json({ error: 'Failed to delete story' });
+  }
+});
+
 // ============================================================================
 // NEW GATE MANAGEMENT ENDPOINTS
 // ============================================================================
