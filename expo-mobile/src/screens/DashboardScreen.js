@@ -28,13 +28,7 @@ export default function DashboardScreen({ navigation }) {
   const [showOwnerSwitcher, setShowOwnerSwitcher] = useState(false);
 
   // Notification permission modal
-  // TESTING: Set to true to force show modal on every load
-  const FORCE_SHOW_MODAL_FOR_TESTING = false;
-  const [showNotificationModal, setShowNotificationModal] = useState(FORCE_SHOW_MODAL_FOR_TESTING);
-
-  useEffect(() => {
-    console.log('🔔 Notification modal visibility changed:', showNotificationModal);
-  }, [showNotificationModal]);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -382,29 +376,6 @@ export default function DashboardScreen({ navigation }) {
         onPress={() => navigation.navigate('Account')}
       >
         <Text style={[styles.accountButtonText, { fontSize: getFontSize(16) }]}>⚙️ Account Settings</Text>
-      </TouchableOpacity>
-
-      {/* DEBUG: Test notification modal */}
-      <TouchableOpacity
-        style={[styles.accountButton, { backgroundColor: '#f97316', marginTop: 10 }]}
-        onPress={() => {
-          console.log('🧪 DEBUG: Manually showing notification modal');
-          setShowNotificationModal(true);
-        }}
-      >
-        <Text style={[styles.accountButtonText, { fontSize: getFontSize(16) }]}>🧪 Test Notification Modal</Text>
-      </TouchableOpacity>
-
-      {/* DEBUG: Reset notification permission */}
-      <TouchableOpacity
-        style={[styles.accountButton, { backgroundColor: '#8b5cf6', marginTop: 10 }]}
-        onPress={async () => {
-          console.log('🧪 DEBUG: Clearing notification permission flag');
-          await AsyncStorage.removeItem('notificationPermissionAsked');
-          Alert.alert('Reset', 'Notification permission flag cleared. Restart app to see modal.');
-        }}
-      >
-        <Text style={[styles.accountButtonText, { fontSize: getFontSize(16) }]}>🔄 Reset Permission Flag</Text>
       </TouchableOpacity>
 
       {/* Owner Switcher Modal */}
