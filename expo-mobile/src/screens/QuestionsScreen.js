@@ -14,10 +14,21 @@ import ApiService from '../services/api';
 export default function QuestionsScreen({ navigation }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
+    loadUserData();
     loadQuestions();
   }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      setUser(JSON.parse(userData));
+    } catch (error) {
+      console.error('Load user error:', error);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -80,7 +91,7 @@ export default function QuestionsScreen({ navigation }) {
       <View style={styles.questionCard}>
         <View style={styles.questionHeader}>
           <Text style={styles.submitter}>
-            From: {item.submitter_name || item.submitter_email}
+            {user?.role === 'viewer' ? 'To' : 'From'}: {item.recipient_name || item.submitter_name || item.submitter_email}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
             <Text style={[styles.statusText, { color: statusStyle.color }]}>
@@ -128,16 +139,22 @@ export default function QuestionsScreen({ navigation }) {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Questions from Loved Ones</Text>
+      <Text style={styles.title}>
+        {user?.role === 'viewer' ? 'My Questions' : 'Questions from Loved Ones'}
+      </Text>
       <Text style={styles.subtitle}>
-        Questions will appear as daily prompts in the order received
+        {user?.role === 'viewer'
+          ? 'Questions you\'ve asked to your loved ones'
+          : 'Questions will appear as daily prompts in the order received'}
       </Text>
 
       {questions.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No questions yet</Text>
           <Text style={styles.emptySubtext}>
-            When loved ones submit questions, they'll appear here
+            {user?.role === 'viewer'
+              ? 'Questions you ask will appear here'
+              : 'When loved ones submit questions, they\'ll appear here'}
           </Text>
         </View>
       ) : (

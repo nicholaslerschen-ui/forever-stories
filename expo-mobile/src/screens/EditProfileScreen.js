@@ -35,6 +35,7 @@ export default function EditProfileScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
 
   // Basic Info
   const [fullName, setFullName] = useState('');
@@ -64,6 +65,10 @@ export default function EditProfileScreen({ navigation }) {
   const loadAccountData = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+
       const accountData = await ApiService.getUserAccount(token);
       const account = accountData.account;
 
@@ -361,14 +366,16 @@ export default function EditProfileScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'life' && styles.activeTab]}
-          onPress={() => setActiveTab('life')}
-        >
-          <Text style={[styles.tabText, activeTab === 'life' && styles.activeTabText]}>
-            Life
-          </Text>
-        </TouchableOpacity>
+        {user?.role !== 'viewer' && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'life' && styles.activeTab]}
+            onPress={() => setActiveTab('life')}
+          >
+            <Text style={[styles.tabText, activeTab === 'life' && styles.activeTabText]}>
+              Life
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -457,22 +464,26 @@ export default function EditProfileScreen({ navigation }) {
         {/* Personal Details Tab */}
         {activeTab === 'details' && (
           <View>
-            <Text style={styles.label}>Birth Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="MM/DD/YYYY"
-              value={birthDate}
-              onChangeText={setBirthDate}
-            />
+            {user?.role !== 'viewer' && (
+              <>
+                <Text style={styles.label}>Birth Date</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="MM/DD/YYYY"
+                  value={birthDate}
+                  onChangeText={setBirthDate}
+                />
 
-            <Text style={styles.label}>Birth Location</Text>
-            <Text style={styles.hint}>Format: City, State/Province, Country</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="San Francisco, California, USA"
-              value={birthLocation}
-              onChangeText={setBirthLocation}
-            />
+                <Text style={styles.label}>Birth Location</Text>
+                <Text style={styles.hint}>Format: City, State/Province, Country</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="San Francisco, California, USA"
+                  value={birthLocation}
+                  onChangeText={setBirthLocation}
+                />
+              </>
+            )}
 
             <Text style={styles.label}>Timezone</Text>
             <Text style={styles.hint}>Tap to select your timezone</Text>
@@ -500,8 +511,8 @@ export default function EditProfileScreen({ navigation }) {
           </View>
         )}
 
-        {/* Life Events & Interests Tab */}
-        {activeTab === 'life' && (
+        {/* Life Events & Interests Tab - Only for owners */}
+        {activeTab === 'life' && user?.role !== 'viewer' && (
           <View>
             <Text style={styles.label}>Life Events</Text>
             <Text style={styles.hint}>

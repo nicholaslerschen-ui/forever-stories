@@ -554,9 +554,9 @@ const handleSignup = async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Check if user exists
+    // Check if user exists (case-insensitive)
     const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
 
@@ -648,7 +648,7 @@ const handleSignup = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'development-secret-key',
       { expiresIn: '30d' }
     );
@@ -688,9 +688,9 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Find user
+    // Find user (case-insensitive email lookup)
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
 
@@ -708,7 +708,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'development-secret-key',
       { expiresIn: '30d' }
     );
@@ -1817,20 +1817,37 @@ app.get('/api/questions/pending', authenticateToken, async (req, res) => {
   }
 });
 
-// Get questions submitted to current user
+// Get questions - for owners: questions submitted TO them, for viewers: questions they submitted
 app.get('/api/questions/submitted', authenticateToken, async (req, res) => {
   try {
-    const ownerId = req.user.userId;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
-    const result = await pool.query(
-      `SELECT sq.id, sq.question_text, sq.status, sq.created_at, sq.used_as_prompt_at,
-              sq.submitter_email, u.full_name as submitter_name
-       FROM submitted_questions sq
-       LEFT JOIN users u ON sq.submitter_user_id = u.id
-       WHERE sq.story_owner_id = $1
-       ORDER BY sq.created_at DESC`,
-      [ownerId]
-    );
+    let result;
+
+    if (userRole === 'viewer') {
+      // For viewers: show questions they submitted to owners
+      result = await pool.query(
+        `SELECT sq.id, sq.question_text, sq.status, sq.created_at, sq.used_as_prompt_at,
+                sq.submitter_email, owner.full_name as recipient_name
+         FROM submitted_questions sq
+         LEFT JOIN users owner ON sq.story_owner_id = owner.id
+         WHERE sq.submitter_user_id = $1
+         ORDER BY sq.created_at DESC`,
+        [userId]
+      );
+    } else {
+      // For owners: show questions submitted to them
+      result = await pool.query(
+        `SELECT sq.id, sq.question_text, sq.status, sq.created_at, sq.used_as_prompt_at,
+                sq.submitter_email, u.full_name as submitter_name
+         FROM submitted_questions sq
+         LEFT JOIN users u ON sq.submitter_user_id = u.id
+         WHERE sq.story_owner_id = $1
+         ORDER BY sq.created_at DESC`,
+        [userId]
+      );
+    }
 
     res.json({ questions: result.rows });
   } catch (error) {
@@ -2497,7 +2514,7 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `SELECT
         pr.*,
-        p.prompt_text, p.domain, p.story_type, p.emotional_weight,
+        p.prompt_text, p.domain, p.story_type, p.emotional_weight, p.gate_tag,
         u.full_name as owner_name,
         COALESCE(
           json_agg(

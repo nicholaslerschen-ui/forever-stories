@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,122 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TextInput,
+  ScrollView,
+  Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 import { useFontSize } from '../context/FontSizeContext';
+import { colors, shadows } from '../styles/colors';
 
 export default function MyStoriesScreen({ navigation }) {
   const { getFontSize } = useFontSize();
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [currentOwner, setCurrentOwner] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDomain, setSelectedDomain] = useState('all');
+  const [selectedGateTag, setSelectedGateTag] = useState('all');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
+    loadUserAndOwner();
     loadStories();
   }, []);
+
+  const loadUserAndOwner = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+
+      if (parsedUser?.role === 'viewer') {
+        const currentOwnerId = await AsyncStorage.getItem('currentOwnerId');
+        if (currentOwnerId) {
+          const token = await AsyncStorage.getItem('authToken');
+          const data = await ApiService.getMyOwners(token);
+          const owner = data.owners.find(o => o.owner_id === currentOwnerId);
+          setCurrentOwner(owner);
+        }
+      }
+    } catch (error) {
+      console.error('Load user/owner error:', error);
+    }
+  };
 
   const loadStories = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const data = await ApiService.getMyStories(token);
-      setStories(data.stories);
+      // Sort by newest first
+      const sortedStories = data.stories.sort((a, b) =>
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      setStories(sortedStories);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Get unique domains from stories
+  const domains = useMemo(() => {
+    const uniqueDomains = [...new Set(stories.map(s => s.domain).filter(Boolean))];
+    return ['all', ...uniqueDomains.sort()];
+  }, [stories]);
+
+  // Get unique gate tags from stories
+  const gateTags = useMemo(() => {
+    const uniqueGateTags = [...new Set(stories.map(s => s.gate_tag).filter(Boolean))];
+    return ['all', ...uniqueGateTags.sort()];
+  }, [stories]);
+
+  // Format gate tag for display (snake_case → Title Case)
+  const formatGateTag = (tag) => {
+    if (tag === 'all') return 'All Stories';
+    return tag
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Filter stories based on search, domain, and gate tag
+  const filteredStories = useMemo(() => {
+    let filtered = stories;
+
+    // Filter by domain
+    if (selectedDomain !== 'all') {
+      filtered = filtered.filter(s => s.domain === selectedDomain);
+    }
+
+    // Filter by gate tag
+    if (selectedGateTag !== 'all') {
+      filtered = filtered.filter(s => s.gate_tag === selectedGateTag);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => {
+        const promptText = (s.prompt_text || '').toLowerCase();
+        const responseText = (s.response_text || '').toLowerCase();
+        const title = (s.title || '').toLowerCase();
+        const question = (s.question || '').toLowerCase();
+
+        return promptText.includes(query) ||
+               responseText.includes(query) ||
+               title.includes(query) ||
+               question.includes(query);
+      });
+    }
+
+    return filtered;
+  }, [stories, selectedDomain, selectedGateTag, searchQuery]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -125,15 +215,21 @@ export default function MyStoriesScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#e11d48" />
-      </View>
+      <LinearGradient
+        colors={[colors.gradientStart, colors.gradientEnd]}
+        style={styles.centered}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </LinearGradient>
     );
   }
 
   if (stories.length === 0) {
     return (
-      <View style={styles.container}>
+      <LinearGradient
+        colors={[colors.gradientStart, colors.gradientEnd]}
+        style={styles.container}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -145,12 +241,35 @@ export default function MyStoriesScreen({ navigation }) {
           <Text style={[styles.emptyTitle, { fontSize: getFontSize(24) }]}>No Stories Yet</Text>
           <Text style={[styles.emptyText, { fontSize: getFontSize(16) }]}>Start writing your first story!</Text>
         </View>
-      </View>
+      </LinearGradient>
     );
   }
 
+  // Empty state for filtered results
+  const renderEmptyFiltered = () => (
+    <View style={styles.emptyFilteredContainer}>
+      <Text style={[styles.emptyTitle, { fontSize: getFontSize(20) }]}>No Stories Found</Text>
+      <Text style={[styles.emptyText, { fontSize: getFontSize(14) }]}>
+        Try adjusting your search or filters
+      </Text>
+      <TouchableOpacity
+        style={styles.resetButton}
+        onPress={() => {
+          setSearchQuery('');
+          setSelectedDomain('all');
+          setSelectedGateTag('all');
+        }}
+      >
+        <Text style={[styles.resetButtonText, { fontSize: getFontSize(14) }]}>Reset Filters</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[colors.gradientStart, colors.gradientEnd]}
+      style={styles.container}
+    >
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -158,11 +277,47 @@ export default function MyStoriesScreen({ navigation }) {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.title, { fontSize: getFontSize(28) }]}>My Stories</Text>
-      <Text style={[styles.subtitle, { fontSize: getFontSize(16) }]}>{stories.length} stories written</Text>
+      <Text style={[styles.title, { fontSize: getFontSize(28) }]}>
+        {user?.role === 'viewer' && currentOwner ? `${currentOwner.owner_name}'s Stories` : 'My Stories'}
+      </Text>
+      <Text style={[styles.subtitle, { fontSize: getFontSize(16) }]}>
+        {filteredStories.length} {filteredStories.length === stories.length ? 'stories written' : `of ${stories.length} stories`}
+      </Text>
+
+      {/* Search Bar with Integrated Filter */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={[styles.searchInput, { fontSize: getFontSize(16) }]}
+          placeholder="Search stories..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <Text style={styles.clearText}>✕</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Text style={[styles.filterButtonText, { fontSize: getFontSize(13) }]}>
+            {selectedGateTag !== 'all'
+              ? `⚡ ${formatGateTag(selectedGateTag)}`
+              : selectedDomain !== 'all'
+              ? `⚡ ${selectedDomain.charAt(0).toUpperCase() + selectedDomain.slice(1)}`
+              : '⚡ All'}
+          </Text>
+          <Text style={styles.filterDropdownIcon}>▼</Text>
+        </TouchableOpacity>
+      </View>
 
       <SwipeListView
-        data={stories}
+        data={filteredStories}
         renderItem={renderStory}
         renderHiddenItem={renderHiddenItem}
         keyExtractor={(item) => item.id}
@@ -171,15 +326,98 @@ export default function MyStoriesScreen({ navigation }) {
         disableRightSwipe
         friction={10}
         tension={40}
+        ListEmptyComponent={renderEmptyFiltered}
       />
-    </View>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowFilterModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitle, { fontSize: getFontSize(18) }]}>Filter</Text>
+            <ScrollView style={styles.modalList}>
+              {/* Domain Section */}
+              <Text style={[styles.sectionTitle, { fontSize: getFontSize(14) }]}>By Domain</Text>
+              {domains.map((domain) => (
+                <TouchableOpacity
+                  key={domain}
+                  style={[
+                    styles.modalOption,
+                    selectedDomain === domain && selectedGateTag === 'all' && styles.modalOptionActive
+                  ]}
+                  onPress={() => {
+                    setSelectedDomain(domain);
+                    setSelectedGateTag('all');
+                    setShowFilterModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      { fontSize: getFontSize(16) },
+                      selectedDomain === domain && selectedGateTag === 'all' && styles.modalOptionTextActive
+                    ]}
+                  >
+                    {domain === 'all' ? 'All Stories' : domain.charAt(0).toUpperCase() + domain.slice(1)}
+                  </Text>
+                  {selectedDomain === domain && selectedGateTag === 'all' && (
+                    <Text style={styles.modalCheckmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+
+              {/* Gate Tag Section */}
+              {gateTags.length > 1 && (
+                <>
+                  <Text style={[styles.sectionTitle, { fontSize: getFontSize(14), marginTop: 20 }]}>By Life Event</Text>
+                  {gateTags.filter(tag => tag !== 'all').map((gateTag) => (
+                    <TouchableOpacity
+                      key={gateTag}
+                      style={[
+                        styles.modalOption,
+                        selectedGateTag === gateTag && styles.modalOptionActive
+                      ]}
+                      onPress={() => {
+                        setSelectedGateTag(gateTag);
+                        setSelectedDomain('all');
+                        setShowFilterModal(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalOptionText,
+                          { fontSize: getFontSize(16) },
+                          selectedGateTag === gateTag && styles.modalOptionTextActive
+                        ]}
+                      >
+                        {formatGateTag(gateTag)}
+                      </Text>
+                      {selectedGateTag === gateTag && (
+                        <Text style={styles.modalCheckmark}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centered: {
     flex: 1,
@@ -192,20 +430,135 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   backText: {
-    color: '#e11d48',
+    color: colors.primary,
     fontSize: 16,
+    fontWeight: '600',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginHorizontal: 20,
     marginBottom: 5,
+    color: colors.gray900,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray600,
     marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    ...shadows.medium,
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.gray900,
+  },
+  clearButton: {
+    padding: 4,
+    marginRight: 8,
+  },
+  clearText: {
+    fontSize: 18,
+    color: colors.gray600,
+    fontWeight: 'bold',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginLeft: 8,
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.gray900,
+    marginRight: 4,
+  },
+  filterDropdownIcon: {
+    fontSize: 10,
+    color: colors.gray600,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    maxHeight: '70%',
+    ...shadows.large,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.gray900,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalList: {
+    maxHeight: 400,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.gray600,
+    marginBottom: 12,
+    marginTop: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
+  },
+  modalOptionActive: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.gray900,
+  },
+  modalOptionTextActive: {
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  modalCheckmark: {
+    fontSize: 18,
+    color: colors.primary,
+    fontWeight: 'bold',
   },
   listContainer: {
     padding: 20,
@@ -221,12 +574,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   deleteButton: {
-    backgroundColor: '#e11d48',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     width: 100,
     height: '100%',
-    borderRadius: 12,
+    borderRadius: 16,
+    ...shadows.medium,
   },
   deleteIcon: {
     fontSize: 24,
@@ -238,11 +592,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   storyCard: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: colors.white,
+    borderWidth: 0,
+    borderRadius: 16,
+    padding: 16,
+    ...shadows.large,
   },
   storyHeader: {
     flexDirection: 'row',
@@ -280,9 +634,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: colors.gray900,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.gray600,
+  },
+  emptyFilteredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  resetButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+  },
+  resetButtonText: {
+    color: colors.white,
+    fontWeight: '600',
   },
 });

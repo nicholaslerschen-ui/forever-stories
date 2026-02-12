@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Animated,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ImageBackground,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import ApiService from '../services/api';
@@ -14,6 +21,7 @@ import OwnerSwitcher from '../components/OwnerSwitcher';
 import PushNotificationService from '../services/PushNotificationService';
 import NotificationPermissionModal from '../components/NotificationPermissionModal';
 import { useFontSize } from '../context/FontSizeContext';
+import { colors, shadows } from '../styles/colors';
 
 export default function DashboardScreen({ navigation }) {
   const { getFontSize } = useFontSize();
@@ -30,11 +38,40 @@ export default function DashboardScreen({ navigation }) {
   // Notification permission modal
   const [showNotificationModal, setShowNotificationModal] = useState(false);
 
+  // Prompt and response state
+  const [prompt, setPrompt] = useState(null);
+  const [response, setResponse] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [isWriting, setIsWriting] = useState(false);
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
   useEffect(() => {
     loadUserData();
     loadPendingQuestions();
     loadCurrentOwner();
+    loadDailyPrompt();
   }, []);
+
+  // Fade in animation when screen loads
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading]);
 
   // Check for first visit after loading is complete and user is loaded
   useEffect(() => {
@@ -148,6 +185,9 @@ export default function DashboardScreen({ navigation }) {
       loadUserData();
       loadPendingQuestions();
       loadCurrentOwner();
+      // Don't reload prompt here - preserve current prompt state
+      // Initial load happens in useEffect, and new prompts load after submission
+      setResponse(''); // Clear response when returning to dashboard
     }, [])
   );
 
@@ -221,11 +261,82 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
+  const loadDailyPrompt = async () => {
+    try {
+      console.log('📝 loadDailyPrompt: Starting...');
+      const token = await AsyncStorage.getItem('authToken');
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+
+      // Only load prompts for owner accounts
+      if (parsedUser?.role === 'owner') {
+        console.log('📝 loadDailyPrompt: User is owner, fetching prompt...');
+        const data = await ApiService.getTodayPrompt(token);
+        console.log('📝 loadDailyPrompt: Response received:', data);
+
+        if (data.prompt) {
+          console.log('📝 loadDailyPrompt: Setting prompt:', data.prompt);
+          setPrompt(data.prompt);
+          setDailyPromptCompleted(data.alreadyAnswered || data.answered || data.promptAnswered || false);
+        } else {
+          console.log('📝 loadDailyPrompt: No prompt in response');
+        }
+      } else {
+        console.log('📝 loadDailyPrompt: User is not owner, skipping');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load daily prompt:', error);
+    }
+  };
+
   const handleOwnerSelect = async (ownerId) => {
     // Reload data for the newly selected owner
     await loadCurrentOwner();
     // Refresh all data (loadUserData will handle prompt check if user is owner)
     await loadUserData();
+    await loadDailyPrompt();
+  };
+
+  const submitResponse = async () => {
+    if (!response.trim()) {
+      Alert.alert('Error', 'Please write something before submitting');
+      return;
+    }
+
+    if (!prompt) {
+      Alert.alert('Error', 'No prompt loaded');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      await ApiService.submitPromptResponse(
+        token,
+        prompt.id,
+        response,
+        prompt.submittedQuestionId || null,
+        null
+      );
+
+      // Clear response and load NEXT weighted prompt
+      setResponse('');
+      await loadUserData();
+
+      // Load next weighted prompt instead of today's prompt
+      const data = await ApiService.getNextWeightedPrompt(token);
+      if (data.prompt) {
+        setPrompt(data.prompt);
+        setDailyPromptCompleted(true);
+      }
+
+      Alert.alert('Success', 'Your story has been saved! Here\'s another prompt for you.');
+    } catch (error) {
+      console.error('Submit error:', error);
+      Alert.alert('Error', error.message || 'Failed to save your story');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleAnswerPrompt = () => {
@@ -259,124 +370,167 @@ export default function DashboardScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.welcome, { fontSize: getFontSize(24) }]}>Welcome back, {user?.fullName?.split(' ')[0]}! 👋</Text>
-
-      {/* Owner Switcher for Viewers */}
-      {isViewer && (
-        <TouchableOpacity
-          style={styles.ownerSwitcherButton}
-          onPress={() => setShowOwnerSwitcher(true)}
-        >
-          <Text style={[styles.ownerSwitcherLabel, { fontSize: getFontSize(12) }]}>Viewing stories from:</Text>
-          <Text style={[styles.ownerSwitcherName, { fontSize: getFontSize(16) }]}>
-            {currentOwner ? currentOwner.owner_name : 'Select Owner'} ▼
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Owner Stats - Only show for owners */}
-      {!isViewer && (
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { fontSize: getFontSize(32) }]}>{stats?.currentStreak || 0}</Text>
-          <Text style={[styles.statLabel, { fontSize: getFontSize(14) }]}>Day Streak 🔥</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { fontSize: getFontSize(32) }]}>{stats?.totalResponses || 0}</Text>
-          <Text style={[styles.statLabel, { fontSize: getFontSize(14) }]}>Stories 📖</Text>
-        </View>
-      </View>
-      )}
-
-      {/* Loved Ones Questions Card - Only show for owners */}
-      {!isViewer && pendingQuestionsCount > 0 && (
-        <TouchableOpacity
-          style={styles.familyQuestionsCard}
-          onPress={() => navigation.navigate('FamilyQuestions')}
-        >
-          <Text style={[styles.familyQuestionsTitle, { fontSize: getFontSize(16) }]}>
-            📬 Questions from Loved Ones ({pendingQuestionsCount})
-          </Text>
-          <Text style={[styles.familyQuestionsSubtitle, { fontSize: getFontSize(14) }]}>
-            Your loved ones have submitted questions for you to answer
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Owner-specific buttons */}
-      {!isViewer && (
-        <>
-          <TouchableOpacity
-            style={styles.promptButton}
-            onPress={handleAnswerPrompt}
-          >
-            <Text style={[styles.promptButtonText, { fontSize: getFontSize(16) }]}>
-              {dailyPromptCompleted ? '📝 Answer Another Prompt' : '📝 Answer Today\'s Prompt'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.freeWriteButton}
-            onPress={() => navigation.navigate('FreeWrite')}
-          >
-            <Text style={[styles.freeWriteButtonText, { fontSize: getFontSize(16) }]}>✍️ Create a Story</Text>
-          </TouchableOpacity>
-        </>
-      )}
-
-      {/* Viewer-specific buttons */}
-      {isViewer && !currentOwner && (
-        <View style={styles.noOwnerCard}>
-          <Text style={[styles.noOwnerTitle, { fontSize: getFontSize(20) }]}>👋 Welcome!</Text>
-          <Text style={[styles.noOwnerText, { fontSize: getFontSize(14) }]}>
-            To get started, you'll need to accept an invite from the person whose stories you want to view.
-          </Text>
-          <TouchableOpacity
-            style={styles.acceptInviteButton}
-            onPress={() => navigation.navigate('AcceptInvite')}
-          >
-            <Text style={[styles.acceptInviteButtonText, { fontSize: getFontSize(16) }]}>✉️ Accept Invite</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {isViewer && currentOwner && (
-        <TouchableOpacity
-          style={styles.promptButton}
-          onPress={() => navigation.navigate('SubmitQuestion', {
-            ownerId: currentOwner?.owner_id,
-            ownerName: currentOwner?.owner_name
-          })}
-        >
-          <Text style={[styles.promptButtonText, { fontSize: getFontSize(16) }]}>💬 Submit a Question</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Shared buttons */}
-      <TouchableOpacity
-        style={styles.storiesButton}
-        onPress={() => navigation.navigate('MyStories')}
+      <ImageBackground
+        source={{ uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&q=80' }}
+        style={styles.backgroundImage}
+        resizeMode="cover"
       >
-        <Text style={[styles.storiesButtonText, { fontSize: getFontSize(16) }]}>
-          📖 {isViewer ? `${currentOwner?.owner_name || 'Owner'}'s Stories` : `My Stories (${stats?.totalResponses || 0})`}
-        </Text>
-      </TouchableOpacity>
+        {/* Overlay for readability */}
+        <View style={styles.overlay} />
 
-      {/* AI Persona temporarily disabled - invalid API key */}
-      {/* <TouchableOpacity
-        style={styles.aiButton}
-        onPress={() => navigation.navigate('AIChat')}
-      >
-        <Text style={[styles.aiButtonText, { fontSize: getFontSize(16) }]}>🤖 Chat with AI Persona</Text>
-      </TouchableOpacity> */}
+        <Animated.View
+          style={{
+            flex: 1,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }}
+        >
+          {/* Header with Logo and Subtitle */}
+          <View style={styles.header}>
+            <Text style={[styles.logo, { fontSize: getFontSize(40) }]}>Forever Stories</Text>
+            <Text style={[styles.logoSubtitle, { fontSize: getFontSize(18) }]}>Preserve Your Legacy</Text>
+          </View>
 
-      <TouchableOpacity
-        style={styles.accountButton}
-        onPress={() => navigation.navigate('Account')}
-      >
-        <Text style={[styles.accountButtonText, { fontSize: getFontSize(16) }]}>⚙️ Account Settings</Text>
-      </TouchableOpacity>
+          {/* Pending Questions Badge */}
+          {!isViewer && pendingQuestionsCount > 0 && (
+            <TouchableOpacity
+              style={styles.pendingBadge}
+              onPress={() => navigation.navigate('FamilyQuestions')}
+            >
+              <Text style={[styles.pendingBadgeText, { fontSize: getFontSize(12) }]}>
+                📬 {pendingQuestionsCount} question{pendingQuestionsCount > 1 ? 's' : ''} from loved ones
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Main Hero Content */}
+          <View style={styles.heroContent}>
+            <View style={styles.heroCard}>
+              <Text style={[styles.heroDescription, { fontSize: getFontSize(16) }]}>
+                {isViewer
+                  ? "Browse cherished stories from your loved ones and help curate their legacy by asking thoughtful questions to inspire new stories."
+                  : "Answer thoughtful prompts daily and create a beautiful collection of memories for your loved ones to cherish forever."}
+              </Text>
+
+              {!isViewer ? (
+                <TouchableOpacity
+                  style={styles.ctaButton}
+                  onPress={() => navigation.navigate('DailyPrompt', { mode: dailyPromptCompleted ? 'another' : 'daily' })}
+                >
+                  <Text style={[styles.ctaButtonText, { fontSize: getFontSize(18) }]}>
+                    {dailyPromptCompleted ? '✍️ Answer Another Prompt' : '✨ Answer Today\'s Prompt'}
+                  </Text>
+                </TouchableOpacity>
+              ) : !currentOwner ? (
+                <TouchableOpacity
+                  style={styles.ctaButton}
+                  onPress={() => navigation.navigate('AcceptInvite')}
+                >
+                  <Text style={[styles.ctaButtonText, { fontSize: getFontSize(18) }]}>
+                    ✉️ Accept Invite
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.viewerActions}>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => navigation.navigate('MyStories')}
+                  >
+                    <Text style={[styles.secondaryButtonText, { fontSize: getFontSize(16) }]}>
+                      📖 Browse Stories
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() =>
+                      navigation.navigate('SubmitQuestion', {
+                        ownerId: currentOwner?.owner_id,
+                        ownerName: currentOwner?.owner_name,
+                      })
+                    }
+                  >
+                    <Text style={[styles.secondaryButtonText, { fontSize: getFontSize(16) }]}>
+                      💬 Ask a Question
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Bottom Icon Navigation */}
+          <View style={styles.bottomNav}>
+            {isViewer ? (
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => setShowOwnerSwitcher(true)}
+              >
+                <Text style={styles.navIcon}>👤</Text>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]} numberOfLines={1}>
+                  {currentOwner ? currentOwner.owner_name : 'Select'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.navButton}>
+                <View style={styles.navIconContainer}>
+                  <Text style={styles.navIcon}>🔥</Text>
+                  {stats?.currentStreak > 0 && (
+                    <View style={styles.navBadge}>
+                      <Text style={styles.navBadgeText}>{stats.currentStreak}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>
+                  Daily Streak
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => navigation.navigate('MyStories')}
+            >
+              <View style={styles.navIconContainer}>
+                <Text style={styles.navIcon}>📖</Text>
+                {!isViewer && stats?.totalResponses > 0 && (
+                  <View style={styles.navBadge}>
+                    <Text style={styles.navBadgeText}>{stats.totalResponses}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>Stories</Text>
+            </TouchableOpacity>
+
+            {!isViewer && (
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigation.navigate('FreeWrite')}
+              >
+                <Text style={styles.navIcon}>✍️</Text>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>Create</Text>
+              </TouchableOpacity>
+            )}
+
+            {isViewer && currentOwner && (
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigation.navigate('Questions')}
+              >
+                <Text style={styles.navIcon}>💬</Text>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>Questions</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => navigation.navigate('Account')}
+            >
+              <Text style={styles.navIcon}>⚙️</Text>
+              <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </ImageBackground>
 
       {/* Owner Switcher Modal */}
       <OwnerSwitcher
@@ -398,178 +552,179 @@ export default function DashboardScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.black,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.gradientStart,
   },
-  welcome: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 60,
-    marginBottom: 20,
-  },
-  ownerSwitcherButton: {
-    backgroundColor: '#f3f4f6',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-  },
-  ownerSwitcherLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  ownerSwitcherName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-  },
-  statCard: {
+  backgroundImage: {
     flex: 1,
-    backgroundColor: '#fef2f2',
-    padding: 20,
-    borderRadius: 12,
-    marginHorizontal: 5,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 20,
     alignItems: 'center',
   },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#e11d48',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  familyQuestionsCard: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 2,
-    borderColor: '#f59e0b',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  familyQuestionsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#92400e',
+  logo: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
     marginBottom: 8,
   },
-  familyQuestionsSubtitle: {
-    fontSize: 14,
-    color: '#78350f',
+  logoSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.white,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  noOwnerCard: {
-    backgroundColor: '#eff6ff',
-    borderWidth: 2,
-    borderColor: '#3b82f6',
-    padding: 24,
+  pendingBadge: {
+    backgroundColor: colors.warningLight,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
     borderRadius: 12,
-    marginBottom: 20,
+  },
+  pendingBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
+  },
+  heroContent: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 100,
   },
-  noOwnerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#111',
+  heroCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    padding: 32,
+    borderRadius: 24,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 500,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  noOwnerText: {
-    fontSize: 15,
-    color: '#1e40af',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  acceptInviteButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  acceptInviteButtonText: {
-    color: '#fff',
+  heroDescription: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: colors.white,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 28,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  promptButton: {
-    backgroundColor: '#e11d48',
-    padding: 20,
-    borderRadius: 12,
+  ctaButton: {
+    backgroundColor: 'rgba(225, 29, 72, 0.85)',
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 15,
-  },
-  promptButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  storiesButton: {
-    backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#e11d48',
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 15,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...shadows.large,
   },
-  storiesButtonText: {
-    color: '#e11d48',
+  ctaButtonText: {
+    color: colors.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  aiButton: {
-    backgroundColor: '#fff',
+  viewerActions: {
+    width: '100%',
+    gap: 12,
+  },
+  secondaryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 2,
-    borderColor: '#9333ea',
-    padding: 20,
-    borderRadius: 12,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  aiButtonText: {
-    color: '#9333ea',
-    fontSize: 18,
-    fontWeight: 'bold',
+  secondaryButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  freeWriteButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#10b981',
-    padding: 20,
-    borderRadius: 12,
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  navButton: {
     alignItems: 'center',
-    marginBottom: 15,
-  },
-  freeWriteButtonText: {
-    color: '#10b981',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  accountButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#64748b',
-    padding: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 15,
   },
-  accountButtonText: {
-    color: '#64748b',
-    fontSize: 18,
-    fontWeight: 'bold',
+  navIconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  navBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  navBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  navLabel: {
+    fontSize: 11,
+    color: colors.white,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
