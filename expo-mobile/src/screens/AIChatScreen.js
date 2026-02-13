@@ -128,6 +128,9 @@ export default function AIChatScreen({ navigation }) {
           onChangeText={setInputText}
           multiline
           maxLength={500}
+          autoCapitalize="sentences"
+          autoCorrect={true}
+          spellCheck={true}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || loading) && styles.sendButtonDisabled]}

@@ -77,6 +77,9 @@ export default function SubmitQuestionScreen({ route, navigation }) {
         value={question}
         onChangeText={setQuestion}
         textAlignVertical="top"
+        autoCapitalize="sentences"
+        autoCorrect={true}
+        spellCheck={true}
       />
 
       <Text style={styles.charCount}>{question.length} characters</Text>

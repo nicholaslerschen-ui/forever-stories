@@ -345,6 +345,9 @@ export default function DailyPromptScreen({ navigation, route }) {
             multiline
             numberOfLines={10}
             textAlignVertical="top"
+            autoCapitalize="sentences"
+            autoCorrect={true}
+            spellCheck={true}
           />
 
           <Text style={[styles.charCount, { fontSize: getFontSize(12) }]}>{response.length} characters</Text>

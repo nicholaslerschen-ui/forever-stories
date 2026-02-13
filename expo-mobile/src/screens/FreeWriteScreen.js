@@ -121,6 +121,9 @@ export default function FreeWriteScreen({ navigation }) {
         placeholder="Give your story a title..."
         value={title}
         onChangeText={setTitle}
+        autoCapitalize="words"
+        autoCorrect={true}
+        spellCheck={true}
       />
 
       <Text style={[styles.label, { fontSize: getFontSize(16) }]}>Your Story</Text>
@@ -132,6 +135,9 @@ export default function FreeWriteScreen({ navigation }) {
         multiline
         numberOfLines={10}
         textAlignVertical="top"
+        autoCapitalize="sentences"
+        autoCorrect={true}
+        spellCheck={true}
       />
 
       <Text style={[styles.charCount, { fontSize: getFontSize(12) }]}>{story.length} characters</Text>
