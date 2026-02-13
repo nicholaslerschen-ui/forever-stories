@@ -90,12 +90,14 @@ CREATE TABLE prompt_responses (
     duration_seconds INT, -- Time spent responding
     follow_up_questions JSONB DEFAULT '[]',
     ai_analysis JSONB DEFAULT '{}', -- Sentiment, themes, entities extracted
+    submitted_question_id UUID REFERENCES submitted_questions(id) ON DELETE SET NULL, -- Link to family/friend submitted question
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_prompt_responses_user_id ON prompt_responses(user_id);
 CREATE INDEX idx_prompt_responses_created_at ON prompt_responses(created_at DESC);
 CREATE INDEX idx_prompt_responses_prompt_id ON prompt_responses(prompt_id);
+CREATE INDEX idx_prompt_responses_submitted_question ON prompt_responses(submitted_question_id);
 
 -- ============================================================================
 -- RESPONSE FILES TABLE (Links media files to prompt responses)

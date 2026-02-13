@@ -2283,10 +2283,10 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 
     // Save initial response
     const result = await pool.query(
-      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, title, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, title, submitted_question_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        RETURNING *`,
-      [userId, promptId, promptText, response, responseType, title || null]
+      [userId, promptId, promptText, response, responseType, title || null, submittedQuestionId || null]
     );
 
     const responseId = result.rows[0].id;
@@ -2515,6 +2515,7 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
       `SELECT
         pr.*,
         p.prompt_text, p.domain, p.story_type, p.emotional_weight, p.gate_tag,
+        sq.question_text as question,
         u.full_name as owner_name,
         COALESCE(
           json_agg(
@@ -2531,6 +2532,7 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
         ) as files
        FROM prompt_responses pr
        LEFT JOIN prompts p ON pr.prompt_id = p.id
+       LEFT JOIN submitted_questions sq ON pr.submitted_question_id = sq.id
        LEFT JOIN response_files rf ON pr.id = rf.response_id
        LEFT JOIN user_files uf ON rf.file_id = uf.id
        LEFT JOIN users u ON pr.user_id = u.id
@@ -2540,7 +2542,7 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
             FROM access_grants
             WHERE recipient_user_id = $1 AND is_active = TRUE
           )
-       GROUP BY pr.id, p.id, u.full_name
+       GROUP BY pr.id, p.id, sq.id, u.full_name
        ORDER BY pr.created_at DESC
        LIMIT 50`,
       [userId]
@@ -2578,6 +2580,7 @@ app.get('/api/prompts/response/:responseId', authenticateToken, async (req, res)
       `SELECT
         pr.*,
         p.prompt_text, p.domain, p.story_type, p.emotional_weight,
+        sq.question_text as question,
         u.full_name as owner_name,
         COALESCE(
           json_agg(
@@ -2595,6 +2598,7 @@ app.get('/api/prompts/response/:responseId', authenticateToken, async (req, res)
         ) as files
        FROM prompt_responses pr
        LEFT JOIN prompts p ON pr.prompt_id = p.id
+       LEFT JOIN submitted_questions sq ON pr.submitted_question_id = sq.id
        LEFT JOIN response_files rf ON pr.id = rf.response_id
        LEFT JOIN user_files uf ON rf.file_id = uf.id
        LEFT JOIN users u ON pr.user_id = u.id
@@ -2605,7 +2609,7 @@ app.get('/api/prompts/response/:responseId', authenticateToken, async (req, res)
              FROM access_grants
              WHERE recipient_user_id = $2 AND is_active = TRUE
            ))
-       GROUP BY pr.id, p.id, u.full_name`,
+       GROUP BY pr.id, p.id, sq.id, u.full_name`,
       [responseId, userId]
     );
 
