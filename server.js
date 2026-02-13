@@ -2002,7 +2002,20 @@ app.post('/api/files/upload', authenticateToken, upload.array('files', 10), asyn
     });
   } catch (error) {
     console.error('File upload error:', error);
-    res.status(500).json({ error: 'Failed to upload files' });
+
+    // Provide specific error messages
+    let errorMessage = 'Failed to upload files';
+    if (error.message.includes('credentials')) {
+      errorMessage = 'AWS credentials not configured';
+    } else if (error.message.includes('bucket')) {
+      errorMessage = 'S3 bucket not accessible';
+    } else if (error.message.includes('size') || error.message.includes('limit')) {
+      errorMessage = 'File size exceeds 100MB limit';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    res.status(500).json({ error: errorMessage });
   }
 });
 

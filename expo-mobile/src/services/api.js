@@ -193,7 +193,16 @@ class ApiService {
       body: formData
     });
 
-    if (!response.ok) throw new Error('Failed to upload files');
+    if (!response.ok) {
+      let errorMessage = 'Failed to upload files';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If response is not JSON, use default message
+      }
+      throw new Error(errorMessage);
+    }
     return response.json();
   }
 
