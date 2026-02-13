@@ -68,7 +68,18 @@ export default function MediaPicker({ selectedMedia, onMediaChange, showThumbnai
       });
     }
 
-    onMediaChange([...selectedMedia, ...newMedia]);
+    // Check if adding new media would exceed the 10 file limit
+    const totalMedia = [...selectedMedia, ...newMedia];
+    if (totalMedia.length > 10) {
+      Alert.alert(
+        'Too Many Files',
+        `You can only attach up to 10 photos and videos per story. You currently have ${selectedMedia.length} selected. Please remove some files first.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    onMediaChange(totalMedia);
   };
 
   const removeMedia = (index) => {

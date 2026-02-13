@@ -1953,7 +1953,34 @@ app.get('/api/questions/question/:questionId', authenticateToken, async (req, re
 // ============================================================================
 
 // Upload files (photos/videos) and return file IDs
-app.post('/api/files/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
+app.post('/api/files/upload', authenticateToken, (req, res, next) => {
+  upload.array('files', 10)(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err);
+
+      // Handle multer-specific errors
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File size exceeds 100MB limit' });
+        } else if (err.code === 'LIMIT_FILE_COUNT') {
+          return res.status(400).json({ error: 'Too many files. Maximum 10 files allowed per upload' });
+        } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).json({ error: 'Unexpected file field' });
+        }
+      }
+
+      // Handle custom file filter errors
+      if (err.message.includes('Invalid file type')) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      return res.status(500).json({ error: err.message || 'File upload failed' });
+    }
+
+    // No error, continue to the actual handler
+    next();
+  });
+}, async (req, res) => {
   try {
     const userId = req.user.userId;
     const uploadedFiles = req.files;
