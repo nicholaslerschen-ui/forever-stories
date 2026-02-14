@@ -138,36 +138,6 @@ function generateInviteCode() {
   return code;
 }
 
-// Helper: Send invite email
-async function sendInviteEmail(recipientEmail, inviteCode, ownerName) {
-  if (!emailTransporter) {
-    console.log('📧 Email not configured, skipping email send (invite code:', inviteCode, ')');
-    return;
-  }
-
-  const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/accept-invite/${inviteCode}`;
-
-  const mailOptions = {
-    from: `Forever Stories <${process.env.EMAIL_USER}>`,
-    to: recipientEmail,
-    subject: `${ownerName} has invited you to Forever Stories`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>You've been invited to Forever Stories</h2>
-        <p>${ownerName} has invited you to view their stories and ask questions.</p>
-        <p>Click the link below to accept the invitation:</p>
-        <a href="${inviteUrl}" style="display: inline-block; padding: 12px 24px; background-color: #e11d48; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0;">
-          Accept Invitation
-        </a>
-        <p>Or enter this code in the app: <strong>${inviteCode}</strong></p>
-        <p style="color: #666; font-size: 14px;">This invitation expires in 30 days.</p>
-      </div>
-    `
-  };
-
-  await emailTransporter.sendMail(mailOptions);
-  console.log('📧 Invite email sent to:', recipientEmail);
-}
 
 // Helper: Send invite SMS
 async function sendInviteSMS(recipientPhone, inviteCode, ownerName) {
@@ -1419,7 +1389,7 @@ app.post('/api/invites/send', authenticateToken, async (req, res) => {
     let sendError = null;
     try {
       if (deliveryMethod === 'email') {
-        await sendInviteEmail(recipientEmail, inviteCode, ownerName);
+        await sendInviteEmail(recipientEmail, ownerName, inviteCode);
       } else {
         await sendInviteSMS(recipientPhone, inviteCode, ownerName);
       }
