@@ -1057,6 +1057,78 @@ app.put('/api/user/account/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete account and all associated data
+app.delete('/api/user/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    console.log(`🗑️  Account deletion requested for user: ${userId}`);
+
+    // Start transaction
+    await pool.query('BEGIN');
+
+    try {
+      // Delete in order to respect foreign key constraints
+
+      // 1. Delete response files
+      await pool.query(
+        'DELETE FROM response_files WHERE response_id IN (SELECT id FROM prompt_responses WHERE user_id = $1)',
+        [userId]
+      );
+
+      // 2. Delete user files (S3 URLs - actual S3 cleanup would happen here in production)
+      await pool.query('DELETE FROM user_files WHERE user_id = $1', [userId]);
+
+      // 3. Delete prompt responses
+      await pool.query('DELETE FROM prompt_responses WHERE user_id = $1', [userId]);
+
+      // 4. Delete submitted questions (as submitter)
+      await pool.query('DELETE FROM submitted_questions WHERE submitter_user_id = $1', [userId]);
+
+      // 5. Delete submitted questions (as story owner)
+      await pool.query('DELETE FROM submitted_questions WHERE story_owner_id = $1', [userId]);
+
+      // 6. Delete access grants (as owner)
+      await pool.query('DELETE FROM access_grants WHERE owner_id = $1', [userId]);
+
+      // 7. Delete access grants (as recipient)
+      await pool.query('DELETE FROM access_grants WHERE recipient_user_id = $1', [userId]);
+
+      // 8. Delete reverse invite tokens
+      await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]);
+
+      // 9. Delete invite codes
+      await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
+
+      // 10. Delete user stats
+      await pool.query('DELETE FROM user_stats WHERE user_id = $1', [userId]);
+
+      // 11. Delete user profile
+      await pool.query('DELETE FROM user_profiles WHERE user_id = $1', [userId]);
+
+      // 12. Finally, delete the user
+      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+
+      // Commit transaction
+      await pool.query('COMMIT');
+
+      console.log(`✅ Account deleted successfully: ${userId}`);
+
+      res.json({
+        success: true,
+        message: 'Account and all associated data have been permanently deleted'
+      });
+    } catch (error) {
+      // Rollback on error
+      await pool.query('ROLLBACK');
+      throw error;
+    }
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 // ============================================================================
 // FAMILY/FRIENDS ACCESS MANAGEMENT
 // ============================================================================

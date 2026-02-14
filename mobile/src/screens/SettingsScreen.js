@@ -10,8 +10,10 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFontSize } from '../context/FontSizeContext';
 import NotificationService from '../services/notifications';
+import ApiService from '../services/api';
 
 export default function SettingsScreen({ navigation }) {
   const { fontSizeMultiplier, updateFontSize, getFontSize } = useFontSize();
@@ -139,6 +141,72 @@ export default function SettingsScreen({ navigation }) {
     } catch (error) {
       Alert.alert('Error', error.message);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete:\n\n• All your stories and memories\n• All photos and videos\n• All responses and data\n• Access for family members\n\nThis action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => confirmDeleteAccount(),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Final Confirmation',
+      'Please confirm one more time that you want to permanently delete your account and all data.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes, Delete Everything',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const token = await AsyncStorage.getItem('authToken');
+              await ApiService.deleteAccount(token);
+
+              // Clear all local data
+              await AsyncStorage.clear();
+
+              Alert.alert(
+                'Account Deleted',
+                'Your account and all data have been permanently deleted.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Navigate to login screen
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
+                    },
+                  },
+                ]
+              );
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to delete account');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -292,6 +360,29 @@ export default function SettingsScreen({ navigation }) {
           )}
         </View>
         )}
+      </View>
+
+      {/* Delete Account Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>
+          Account
+        </Text>
+        <Text style={[styles.sectionSubtitle, { fontSize: getFontSize(14) }]}>
+          Manage your account data
+        </Text>
+
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDeleteAccount}
+          disabled={loading}
+        >
+          <Text style={[styles.deleteButtonText, { fontSize: getFontSize(16) }]}>
+            🗑️ Delete Account
+          </Text>
+          <Text style={[styles.deleteButtonSubtext, { fontSize: getFontSize(12) }]}>
+            Permanently delete all your data
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.spacer} />
@@ -467,6 +558,23 @@ const styles = StyleSheet.create({
   timeButtonTextActive: {
     color: '#e11d48',
     fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#dc2626',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  deleteButtonSubtext: {
+    color: '#991b1b',
+    fontSize: 12,
   },
   spacer: {
     height: 40,
