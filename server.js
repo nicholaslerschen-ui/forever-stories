@@ -26,6 +26,9 @@ const {
   resetNotificationCooldown
 } = require('./pushNotificationService');
 
+// Import email service
+const { sendWelcomeEmail, sendInviteEmail } = require('./services/emailService');
+
 // AWS S3 Configuration
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -548,10 +551,14 @@ const handleSignup = async (req, res) => {
   try {
     console.log('=== SIGNUP REQUEST RECEIVED ===');
     console.log('Body:', req.body);
-    const { email, password, fullName, role, reverseInviteCode } = req.body;
+    const { email, password, fullName, role, reverseInviteCode, termsAccepted } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    if (!termsAccepted) {
+      return res.status(400).json({ error: 'You must accept the Terms of Service and Privacy Policy' });
     }
 
     // Check if user exists (case-insensitive)
@@ -572,8 +579,8 @@ const handleSignup = async (req, res) => {
     const userRole = role && (role === 'viewer' || role === 'owner') ? role : 'owner';
 
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
+      `INSERT INTO users (email, password_hash, full_name, role, terms_accepted_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())
        RETURNING id, email, full_name, role`,
       [email, hashedPassword, fullName, userRole]
     );
@@ -668,6 +675,11 @@ const handleSignup = async (req, res) => {
       response.reverseInviteUsed = true;
       response.viewerName = viewerName;
     }
+
+    // Send welcome email (async, don't wait for it)
+    sendWelcomeEmail(user.email, user.full_name).catch(err => {
+      console.error('Failed to send welcome email:', err);
+    });
 
     res.json(response);
   } catch (error) {

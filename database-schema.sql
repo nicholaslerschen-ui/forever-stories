@@ -14,6 +14,8 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
+    role VARCHAR(50) DEFAULT 'owner', -- 'owner' or 'viewer'
+    terms_accepted_at TIMESTAMP WITH TIME ZONE, -- When user accepted terms
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

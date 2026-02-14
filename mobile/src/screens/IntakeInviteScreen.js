@@ -70,14 +70,19 @@ export default function IntakeInviteScreen({ navigation }) {
 
       for (const contact of validContacts) {
         try {
+          let result;
           if (inviteMethod === 'email') {
             // Send via email using sendInvite (Phase 2 system)
-            await ApiService.sendInvite(token, 'email', contact, null);
+            result = await ApiService.sendInvite(token, 'email', contact, null);
           } else {
             // Send via SMS using sendInvite (Phase 2 system)
-            await ApiService.sendInvite(token, 'sms', null, contact);
+            result = await ApiService.sendInvite(token, 'sms', null, contact);
           }
-          inviteResults.push({ contact, success: true });
+          inviteResults.push({
+            contact,
+            success: true,
+            inviteCode: result.inviteCode
+          });
         } catch (error) {
           console.error('Failed to invite:', contact, error);
           inviteResults.push({
@@ -247,6 +252,11 @@ export default function IntakeInviteScreen({ navigation }) {
                   ]}>
                     {result.contact}
                   </Text>
+                  {result.success && result.inviteCode && (
+                    <Text style={styles.inviteCodeText}>
+                      Invite code: {result.inviteCode}
+                    </Text>
+                  )}
                   {!result.success && result.error && (
                     <Text style={styles.resultError}>{result.error}</Text>
                   )}
@@ -480,6 +490,13 @@ const styles = StyleSheet.create({
   },
   resultFailure: {
     color: '#dc2626',
+  },
+  inviteCodeText: {
+    fontSize: 14,
+    color: '#059669',
+    marginTop: 4,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   resultError: {
     fontSize: 13,

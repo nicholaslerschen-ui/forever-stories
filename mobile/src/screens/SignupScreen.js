@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -18,6 +19,7 @@ export default function SignupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('owner'); // Default to owner
   const [inviteCode, setInviteCode] = useState(''); // For reverse invites
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSignup = async () => {
     if (!email || !password || !fullName) {
@@ -25,9 +27,14 @@ export default function SignupScreen({ navigation }) {
       return;
     }
 
+    if (!termsAccepted) {
+      Alert.alert('Terms Required', 'Please accept the Terms of Service and Privacy Policy to continue');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await ApiService.signup(email, password, fullName, role, inviteCode.trim() || null);
+      const response = await ApiService.signup(email, password, fullName, role, inviteCode.trim() || null, termsAccepted);
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
 
@@ -130,10 +137,37 @@ export default function SignupScreen({ navigation }) {
         secureTextEntry
       />
 
+      {/* Terms and Conditions Checkbox */}
       <TouchableOpacity
-        style={styles.button}
+        style={styles.checkboxContainer}
+        onPress={() => setTermsAccepted(!termsAccepted)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+          {termsAccepted && <Text style={styles.checkboxCheck}>✓</Text>}
+        </View>
+        <Text style={styles.checkboxLabel}>
+          I agree to the{' '}
+          <Text
+            style={styles.linkBlue}
+            onPress={() => Linking.openURL('https://github.com/anthropics/claude-code')}
+          >
+            Terms of Service
+          </Text>
+          {' '}and{' '}
+          <Text
+            style={styles.linkBlue}
+            onPress={() => Linking.openURL('https://github.com/anthropics/claude-code')}
+          >
+            Privacy Policy
+          </Text>
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, !termsAccepted && styles.buttonDisabled]}
         onPress={handleSignup}
-        disabled={loading}
+        disabled={loading || !termsAccepted}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
@@ -218,12 +252,52 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#e11d48',
+    borderColor: '#e11d48',
+  },
+  checkboxCheck: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+  },
+  linkBlue: {
+    color: '#3b82f6',
+    textDecorationLine: 'underline',
+  },
   button: {
     backgroundColor: '#e11d48',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#fca5a5',
+    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
