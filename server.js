@@ -1085,10 +1085,37 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       // 14. Delete user achievements
       await pool.query('DELETE FROM user_achievements WHERE user_id = $1', [userId]);
 
-      // 15. Delete user profile
+      // 15. Delete push tokens (if table exists)
+      await pool.query('DELETE FROM push_tokens WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 16. Delete notification preferences (if table exists)
+      await pool.query('DELETE FROM notification_preferences WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 17. Delete notification log (if table exists)
+      await pool.query('DELETE FROM notification_log WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 18. Delete user prompt affinity (if table exists)
+      await pool.query('DELETE FROM user_prompt_affinity WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 19. Delete user prompt history (if table exists)
+      await pool.query('DELETE FROM user_prompt_history WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 20. Delete user daily stats (if table exists)
+      await pool.query('DELETE FROM user_daily_stats WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 21. Delete prompt ratings (if table exists)
+      await pool.query('DELETE FROM prompt_ratings WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 22. Delete user suppressed prompts (if table exists)
+      await pool.query('DELETE FROM user_suppressed_prompts WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 23. Delete user unlocked gates (if table exists)
+      await pool.query('DELETE FROM user_unlocked_gates WHERE user_id = $1', [userId]).catch(() => {});
+
+      // 24. Delete user profile
       await pool.query('DELETE FROM user_profiles WHERE user_id = $1', [userId]);
 
-      // 16. Finally, delete the user
+      // 25. Finally, delete the user
       await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
       // Commit transaction
