@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -21,10 +22,16 @@ export default function SignupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('owner'); // Default to owner
   const [inviteCode, setInviteCode] = useState(''); // For reverse invites
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSignup = async () => {
     if (!email || !password || !fullName) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!termsAccepted) {
+      Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
       return;
     }
 
@@ -139,6 +146,32 @@ export default function SignupScreen({ navigation }) {
           onChangeText={setPassword}
           secureTextEntry
         />
+
+        {/* Terms and Conditions Checkbox */}
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setTermsAccepted(!termsAccepted)}
+        >
+          <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+            {termsAccepted && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.checkboxLabel}>
+            I accept the{' '}
+            <Text
+              style={styles.link}
+              onPress={() => Linking.openURL('https://foreverstories.app/terms')}
+            >
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text
+              style={styles.link}
+              onPress={() => Linking.openURL('https://foreverstories.app/privacy')}
+            >
+              Privacy Policy
+            </Text>
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
@@ -258,5 +291,42 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#e11d48',
+    borderColor: '#e11d48',
+  },
+  checkboxCheck: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  link: {
+    color: '#e11d48',
+    textDecorationLine: 'underline',
   },
 });
