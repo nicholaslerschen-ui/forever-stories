@@ -1066,9 +1066,13 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
 
       // 8. Delete reverse invite tokens
       await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]);
+      await pool.query('DELETE FROM reverse_invite_tokens WHERE used_by_owner_id = $1', [userId]).catch(() => {});
 
       // 9. Delete invite codes
       await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
+
+      // 9b. Delete invite tokens (as owner or as user who used the invite)
+      await pool.query('DELETE FROM invite_tokens WHERE owner_id = $1 OR used_by_user_id = $1', [userId, userId]).catch(() => {});
 
       // 10. Delete user stats
       await pool.query('DELETE FROM user_stats WHERE user_id = $1', [userId]);
