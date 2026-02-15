@@ -1061,7 +1061,7 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       console.log('6. Deleting access grants (owner and recipient)...');
       await pool.query(
         'DELETE FROM access_grants WHERE owner_id = $1 OR recipient_user_id = $1',
-        [userId, userId]
+        [userId]
       );
 
       console.log('6b. Deleting access grants (granted_by - may not exist)...');
@@ -1083,7 +1083,7 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
 
       console.log('9b. Deleting invite tokens...');
-      await pool.query('DELETE FROM invite_tokens WHERE owner_id = $1 OR used_by_user_id = $1', [userId, userId]).catch(() => {});
+      await pool.query('DELETE FROM invite_tokens WHERE owner_id = $1 OR used_by_user_id = $1', [userId]).catch(() => {});
 
       console.log('10. Deleting user stats...');
       await pool.query('DELETE FROM user_stats WHERE user_id = $1', [userId]);
