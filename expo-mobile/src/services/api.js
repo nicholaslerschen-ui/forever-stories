@@ -36,7 +36,7 @@ class ApiService {
   }
 
   async signup(email, password, fullName, role = 'owner', reverseInviteCode = null) {
-    const body = { email, password, fullName, role };
+    const body = { email, password, fullName, role, termsAccepted: true };
     if (reverseInviteCode) {
       body.reverseInviteCode = reverseInviteCode;
     }
