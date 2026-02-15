@@ -1064,6 +1064,9 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       // 7. Delete access grants (as recipient)
       await pool.query('DELETE FROM access_grants WHERE recipient_user_id = $1', [userId]);
 
+      // 7b. Delete access grants (as granter)
+      await pool.query('DELETE FROM access_grants WHERE granted_by = $1', [userId]).catch(() => {});
+
       // 8. Delete reverse invite tokens
       await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]);
       await pool.query('DELETE FROM reverse_invite_tokens WHERE used_by_owner_id = $1', [userId]).catch(() => {});
