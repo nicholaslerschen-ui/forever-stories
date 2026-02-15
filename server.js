@@ -226,6 +226,10 @@ app.use(cors({
 
 app.use(express.json());
 
+// Serve static files from public folder
+const path = require('path');
+app.use(express.static('public'));
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -287,228 +291,25 @@ app.get('/health', async (req, res) => {
 // ============================================================================
 
 // Privacy Policy
+// Legal Pages - Serve comprehensive HTML files
 app.get('/privacy-policy', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Privacy Policy - Forever Stories</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          line-height: 1.6;
-          color: #333;
-        }
-        h1 { color: #e11d48; margin-bottom: 10px; }
-        h2 { color: #111; margin-top: 30px; }
-        .last-updated { color: #666; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 15px; }
-      </style>
-    </head>
-    <body>
-      <h1>Privacy Policy</h1>
-      <p class="last-updated">Last Updated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-
-      <h2>1. Information We Collect</h2>
-      <p>Forever Stories ("we," "our," or "us") collects the following information:</p>
-      <ul>
-        <li><strong>Account Information:</strong> Name, email address, phone number (if provided), and password</li>
-        <li><strong>Stories and Responses:</strong> Written content, photos, and videos you upload</li>
-        <li><strong>Usage Data:</strong> How you interact with the app, including prompts answered and features used</li>
-        <li><strong>Device Information:</strong> Push notification tokens for mobile devices</li>
-      </ul>
-
-      <h2>2. How We Use Your Information</h2>
-      <p>We use your information to:</p>
-      <ul>
-        <li>Provide and maintain the Forever Stories service</li>
-        <li>Enable you to share stories with invited family members and friends</li>
-        <li>Send daily prompts and notifications (if enabled)</li>
-        <li>Process invitations you send to others</li>
-        <li>Improve our service and develop new features</li>
-        <li>Protect against fraud and abuse</li>
-      </ul>
-
-      <h2>3. SMS/Text Messaging</h2>
-      <p>If you use our invite feature to send SMS invitations:</p>
-      <ul>
-        <li>You consent to us sending text messages on your behalf to phone numbers you provide</li>
-        <li>Recipients can opt out by replying STOP to any message</li>
-        <li>Standard message and data rates may apply</li>
-        <li>We do not send marketing or promotional messages via SMS</li>
-      </ul>
-
-      <h2>4. Information Sharing</h2>
-      <p>We share your information only:</p>
-      <ul>
-        <li>With family members and friends you explicitly invite to view your stories</li>
-        <li>With service providers (AWS, Twilio, SendGrid) who help us operate the service</li>
-        <li>When required by law or to protect our rights</li>
-      </ul>
-      <p><strong>We never sell your personal information or stories to third parties.</strong></p>
-
-      <h2>5. Data Security</h2>
-      <p>We use industry-standard security measures including:</p>
-      <ul>
-        <li>Encrypted data transmission (HTTPS/TLS)</li>
-        <li>Password hashing with bcrypt</li>
-        <li>Secure cloud storage (AWS S3)</li>
-        <li>Access controls and authentication</li>
-      </ul>
-
-      <h2>6. Your Rights</h2>
-      <p>You have the right to:</p>
-      <ul>
-        <li>Access and download your stories</li>
-        <li>Delete your account and all associated data</li>
-        <li>Revoke access for family members/friends</li>
-        <li>Opt out of notifications and reminders</li>
-        <li>Request correction of your information</li>
-      </ul>
-
-      <h2>7. Data Retention</h2>
-      <p>We retain your data for as long as your account is active. When you delete your account, we permanently delete your stories and personal information within 30 days.</p>
-
-      <h2>8. Children's Privacy</h2>
-      <p>Forever Stories is intended for users 13 years and older. We do not knowingly collect information from children under 13.</p>
-
-      <h2>9. Changes to This Policy</h2>
-      <p>We may update this privacy policy from time to time. We will notify you of significant changes via email or app notification.</p>
-
-      <h2>10. Contact Us</h2>
-      <p>If you have questions about this privacy policy or your data, contact us at:</p>
-      <p><strong>Email:</strong> privacy@foreverstories.com</p>
-
-      <p style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
-        Forever Stories - Preserving memories for generations
-      </p>
-    </body>
-    </html>
-  `);
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
 });
 
-// Terms of Service
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
 app.get('/terms-of-service', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Terms of Service - Forever Stories</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          line-height: 1.6;
-          color: #333;
-        }
-        h1 { color: #e11d48; margin-bottom: 10px; }
-        h2 { color: #111; margin-top: 30px; }
-        .last-updated { color: #666; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 15px; }
-      </style>
-    </head>
-    <body>
-      <h1>Terms of Service</h1>
-      <p class="last-updated">Last Updated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
 
-      <h2>1. Acceptance of Terms</h2>
-      <p>By accessing or using Forever Stories ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.</p>
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
 
-      <h2>2. Description of Service</h2>
-      <p>Forever Stories is a digital storytelling platform that allows users to:</p>
-      <ul>
-        <li>Write and preserve personal stories and memories</li>
-        <li>Answer daily prompts and questions</li>
-        <li>Upload photos and videos</li>
-        <li>Share stories with invited family members and friends</li>
-        <li>Invite others to view their stories via email or SMS</li>
-      </ul>
-
-      <h2>3. User Accounts</h2>
-      <p>To use the Service, you must:</p>
-      <ul>
-        <li>Be at least 13 years old</li>
-        <li>Provide accurate and complete registration information</li>
-        <li>Maintain the security of your password</li>
-        <li>Accept responsibility for all activities under your account</li>
-      </ul>
-
-      <h2>4. SMS Invitations</h2>
-      <p>When you use the invite feature to send SMS messages:</p>
-      <ul>
-        <li>You represent that you have permission to contact the recipients</li>
-        <li>You agree not to send unwanted or unsolicited messages</li>
-        <li>You understand that message and data rates may apply</li>
-        <li>Recipients can opt out by replying STOP</li>
-        <li>You consent to Forever Stories sending messages on your behalf</li>
-      </ul>
-
-      <h2>5. Content Ownership and License</h2>
-      <p><strong>Your Content:</strong> You retain ownership of all stories, photos, videos, and other content you upload ("Your Content").</p>
-      <p><strong>License to Us:</strong> You grant Forever Stories a limited license to store, display, and transmit Your Content solely to provide the Service to you and those you invite.</p>
-      <p><strong>We do not claim ownership of Your Content and will not use it for any purpose other than providing the Service.</strong></p>
-
-      <h2>6. Acceptable Use</h2>
-      <p>You agree not to:</p>
-      <ul>
-        <li>Upload illegal, harmful, or offensive content</li>
-        <li>Violate any laws or regulations</li>
-        <li>Infringe on others' intellectual property rights</li>
-        <li>Attempt to gain unauthorized access to the Service</li>
-        <li>Transmit viruses, malware, or harmful code</li>
-        <li>Spam or harass other users</li>
-        <li>Use the Service for commercial purposes without permission</li>
-      </ul>
-
-      <h2>7. Invited Viewers</h2>
-      <p>When you invite family members or friends:</p>
-      <ul>
-        <li>You control what permissions they have (view stories, chat with AI, submit questions)</li>
-        <li>You can revoke access at any time</li>
-        <li>They must create their own account to access your stories</li>
-        <li>They may not share your stories outside the platform without your permission</li>
-      </ul>
-
-      <h2>8. Privacy</h2>
-      <p>Your use of the Service is also governed by our <a href="/privacy-policy">Privacy Policy</a>, which is incorporated into these Terms by reference.</p>
-
-      <h2>9. Termination</h2>
-      <p>You may delete your account at any time through the app settings. We may suspend or terminate your account if you violate these Terms. Upon termination, your access to the Service will cease, and we will delete your data as described in our Privacy Policy.</p>
-
-      <h2>10. Disclaimers</h2>
-      <p>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE.</p>
-
-      <h2>11. Limitation of Liability</h2>
-      <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, FOREVER STORIES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING FROM YOUR USE OF THE SERVICE.</p>
-
-      <h2>12. Data Backup</h2>
-      <p>While we take reasonable measures to protect your data, you are responsible for maintaining your own backups. We recommend periodically downloading your stories.</p>
-
-      <h2>13. Changes to Terms</h2>
-      <p>We may modify these Terms at any time. We will notify you of material changes via email or app notification. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
-
-      <h2>14. Governing Law</h2>
-      <p>These Terms are governed by the laws of the State of California, United States, without regard to conflict of law principles.</p>
-
-      <h2>15. Contact</h2>
-      <p>For questions about these Terms, contact us at:</p>
-      <p><strong>Email:</strong> support@foreverstories.com</p>
-
-      <p style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
-        Forever Stories - Preserving memories for generations
-      </p>
-    </body>
-    </html>
-  `);
+app.get('/download', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'download.html'));
 });
 
 // ============================================================================
