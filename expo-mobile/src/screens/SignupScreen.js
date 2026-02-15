@@ -159,14 +159,14 @@ export default function SignupScreen({ navigation }) {
             I accept the{' '}
             <Text
               style={styles.link}
-              onPress={() => Linking.openURL('https://foreverstories.app/terms')}
+              onPress={() => Linking.openURL('https://foreverstories.co/terms')}
             >
               Terms of Service
             </Text>
             {' '}and{' '}
             <Text
               style={styles.link}
-              onPress={() => Linking.openURL('https://foreverstories.app/privacy')}
+              onPress={() => Linking.openURL('https://foreverstories.co/privacy')}
             >
               Privacy Policy
             </Text>

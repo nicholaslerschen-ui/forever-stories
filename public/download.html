@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Forever Stories</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+        h1 {
+            color: #e11d48;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .app-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .store-button {
+            display: block;
+            background: #e11d48;
+            color: white;
+            text-decoration: none;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 15px 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .store-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(225, 29, 72, 0.3);
+        }
+        .store-button.ios {
+            background: #000;
+        }
+        .store-button.android {
+            background: #3DDC84;
+        }
+        .coming-soon {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .coming-soon:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .badge {
+            display: inline-block;
+            background: #fef2f2;
+            color: #e11d48;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 14px;
+        }
+        .features {
+            text-align: left;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+        .features h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .features ul {
+            list-style: none;
+        }
+        .features li {
+            padding: 8px 0;
+            color: #666;
+        }
+        .features li:before {
+            content: "✓ ";
+            color: #e11d48;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-icon">📖</div>
+        <h1>Forever Stories</h1>
+        <p class="tagline">Preserve memories for generations</p>
+
+        <!-- Replace these # with actual App Store URLs when published -->
+        <a href="#" class="store-button ios coming-soon">
+            🍎 Download on App Store
+            <span class="badge">Coming Soon</span>
+        </a>
+
+        <a href="#" class="store-button android coming-soon">
+            🤖 Get it on Google Play
+            <span class="badge">Coming Soon</span>
+        </a>
+
+        <div class="features">
+            <h3>What you'll get:</h3>
+            <ul>
+                <li>Daily prompts to capture your memories</li>
+                <li>Write free-form stories anytime</li>
+                <li>Add photos and videos to your stories</li>
+                <li>Share with family and friends</li>
+                <li>Preserve your legacy forever</li>
+            </ul>
+        </div>
+
+        <p class="footer">
+            © 2026 Forever Stories • <a href="/terms" style="color: #e11d48;">Terms</a> • <a href="/privacy" style="color: #e11d48;">Privacy</a>
+        </p>
+    </div>
+
+    <script>
+        // Uncomment when app stores are live:
+        /*
+        const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const android = /Android/.test(navigator.userAgent);
+
+        if (iOS) {
+            window.location.href = 'https://apps.apple.com/app/your-app-id';
+        } else if (android) {
+            window.location.href = 'https://play.google.com/store/apps/details?id=com.foreverstories';
+        }
+        */
+    </script>
+</body>
+</html>
