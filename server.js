@@ -647,9 +647,18 @@ const handleSignup = async (req, res) => {
     }
 
     // Send welcome email (async, don't wait for it)
-    sendWelcomeEmail(user.email, user.full_name).catch(err => {
-      console.error('Failed to send welcome email:', err);
-    });
+    console.log(`📧 Attempting to send welcome email to: ${user.email}, name: ${user.full_name}`);
+    sendWelcomeEmail(user.email, user.full_name)
+      .then(result => {
+        if (result.success) {
+          console.log(`✅ Welcome email sent successfully to ${user.email}. MessageId: ${result.messageId}`);
+        } else {
+          console.error(`❌ Welcome email failed for ${user.email}:`, result.error);
+        }
+      })
+      .catch(err => {
+        console.error(`❌ Exception sending welcome email to ${user.email}:`, err);
+      });
 
     res.json(response);
   } catch (error) {
@@ -1452,13 +1461,15 @@ app.post('/api/invites/send', authenticateToken, async (req, res) => {
     let sendError = null;
     try {
       if (deliveryMethod === 'email') {
-        await sendInviteEmail(recipientEmail, ownerName, inviteCode);
+        console.log(`📧 Attempting to send invite email to: ${recipientEmail}, from: ${ownerName}, code: ${inviteCode}`);
+        const result = await sendInviteEmail(recipientEmail, ownerName, inviteCode);
+        console.log(`✅ Invite email sent successfully to ${recipientEmail}. MessageId: ${result.messageId}`);
       } else {
         await sendInviteSMS(recipientPhone, inviteCode, ownerName);
       }
       sendSuccess = true;
     } catch (error) {
-      console.error(`${deliveryMethod.toUpperCase()} send failed:`, error);
+      console.error(`❌ ${deliveryMethod.toUpperCase()} send failed to ${deliveryMethod === 'email' ? recipientEmail : recipientPhone}:`, error);
       sendError = error.message || 'Failed to send invitation';
       // If SMS/email is not configured, we'll still return success with a warning
       // But if it's configured and fails, return error
