@@ -46,7 +46,6 @@ async function sendWelcomeEmail(userEmail, userName) {
         <li><strong>Write Free-Form Stories</strong> – Share memories whenever inspiration strikes</li>
         <li><strong>Add Photos & Videos</strong> – Attach media to bring your stories to life</li>
         <li><strong>Invite Loved Ones</strong> – Share your stories with family and friends</li>
-        <li><strong>Chat with Your AI Persona</strong> – Let others interact with an AI version trained on your memories</li>
       </ul>
 
       <p>Your stories matter. Start preserving them today!</p>
@@ -79,7 +78,6 @@ Here's what you can do:
 - Write Free-Form Stories – Share memories whenever inspiration strikes
 - Add Photos & Videos – Attach media to bring your stories to life
 - Invite Loved Ones – Share your stories with family and friends
-- Chat with Your AI Persona – Let others interact with an AI version trained on your memories
 
 Your stories matter. Start preserving them today!
 
@@ -166,7 +164,6 @@ async function sendInviteEmail(recipientEmail, senderName, inviteCode) {
       <ul>
         <li><strong>Read Their Stories</strong> – Explore memories and life experiences shared by ${senderName}</li>
         <li><strong>Submit Questions</strong> – Ask questions you'd like them to answer</li>
-        <li><strong>Chat with AI Persona</strong> – Have conversations with an AI version trained on their stories</li>
       </ul>
 
       <p style="margin-top: 30px;">
@@ -202,7 +199,6 @@ Your Invite Code: ${inviteCode}
 What you can do:
 - Read Their Stories – Explore memories and life experiences shared by ${senderName}
 - Submit Questions – Ask questions you'd like them to answer
-- Chat with AI Persona – Have conversations with an AI version trained on their stories
 
 Ready to get started?
 Download the Forever Stories app and create an account using your invite code: ${inviteCode}
