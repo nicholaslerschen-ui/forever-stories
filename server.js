@@ -1079,12 +1079,7 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
         console.log('used_by_owner_id column does not exist, skipping...');
       });
 
-      console.log('9. Deleting invite codes...');
-      await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]).catch((e) => {
-        console.log('invite_codes table does not exist, skipping...');
-      });
-
-      console.log('9b. Deleting invite tokens...');
+      console.log('9. Deleting invite tokens...');
       await pool.query('DELETE FROM invite_tokens WHERE owner_id = $1 OR used_by_user_id = $1', [userId]).catch(() => {});
 
       console.log('10. Deleting user stats...');
