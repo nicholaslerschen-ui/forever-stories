@@ -1058,18 +1058,17 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       console.log('5. Deleting submitted questions (as story owner)...');
       await pool.query('DELETE FROM submitted_questions WHERE story_owner_id = $1', [userId]);
 
-      console.log('6. Deleting access grants (as owner)...');
-      await pool.query('DELETE FROM access_grants WHERE owner_id = $1', [userId]);
-
-      console.log('7. Deleting access grants (as recipient)...');
-      await pool.query('DELETE FROM access_grants WHERE recipient_user_id = $1', [userId]);
-
-      console.log('7b. Deleting access grants (as granter)...');
-      await pool.query('DELETE FROM access_grants WHERE granted_by = $1', [userId]).catch(() => {});
+      console.log('6. Deleting access grants (all references)...');
+      await pool.query(
+        'DELETE FROM access_grants WHERE owner_id = $1 OR recipient_user_id = $1 OR granted_by = $1',
+        [userId, userId, userId]
+      );
 
       console.log('8. Deleting reverse invite tokens...');
-      await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]);
-      await pool.query('DELETE FROM reverse_invite_tokens WHERE used_by_owner_id = $1', [userId]).catch(() => {});
+      await pool.query(
+        'DELETE FROM reverse_invite_tokens WHERE viewer_id = $1 OR used_by_owner_id = $1',
+        [userId, userId]
+      ).catch(() => {});
 
       console.log('9. Deleting invite codes...');
       await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
