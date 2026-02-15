@@ -1040,89 +1040,89 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
     try {
       // Delete in order to respect foreign key constraints
 
-      // 1. Delete response files
+      console.log('1. Deleting response files...');
       await pool.query(
         'DELETE FROM response_files WHERE response_id IN (SELECT id FROM prompt_responses WHERE user_id = $1)',
         [userId]
       );
 
-      // 2. Delete user files (S3 URLs - actual S3 cleanup would happen here in production)
+      console.log('2. Deleting user files...');
       await pool.query('DELETE FROM user_files WHERE user_id = $1', [userId]);
 
-      // 3. Delete prompt responses
+      console.log('3. Deleting prompt responses...');
       await pool.query('DELETE FROM prompt_responses WHERE user_id = $1', [userId]);
 
-      // 4. Delete submitted questions (as submitter)
+      console.log('4. Deleting submitted questions (as submitter)...');
       await pool.query('DELETE FROM submitted_questions WHERE submitter_user_id = $1', [userId]);
 
-      // 5. Delete submitted questions (as story owner)
+      console.log('5. Deleting submitted questions (as story owner)...');
       await pool.query('DELETE FROM submitted_questions WHERE story_owner_id = $1', [userId]);
 
-      // 6. Delete access grants (as owner)
+      console.log('6. Deleting access grants (as owner)...');
       await pool.query('DELETE FROM access_grants WHERE owner_id = $1', [userId]);
 
-      // 7. Delete access grants (as recipient)
+      console.log('7. Deleting access grants (as recipient)...');
       await pool.query('DELETE FROM access_grants WHERE recipient_user_id = $1', [userId]);
 
-      // 7b. Delete access grants (as granter)
+      console.log('7b. Deleting access grants (as granter)...');
       await pool.query('DELETE FROM access_grants WHERE granted_by = $1', [userId]).catch(() => {});
 
-      // 8. Delete reverse invite tokens
+      console.log('8. Deleting reverse invite tokens...');
       await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]);
       await pool.query('DELETE FROM reverse_invite_tokens WHERE used_by_owner_id = $1', [userId]).catch(() => {});
 
-      // 9. Delete invite codes
+      console.log('9. Deleting invite codes...');
       await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
 
-      // 9b. Delete invite tokens (as owner or as user who used the invite)
+      console.log('9b. Deleting invite tokens...');
       await pool.query('DELETE FROM invite_tokens WHERE owner_id = $1 OR used_by_user_id = $1', [userId, userId]).catch(() => {});
 
-      // 10. Delete user stats
+      console.log('10. Deleting user stats...');
       await pool.query('DELETE FROM user_stats WHERE user_id = $1', [userId]);
 
-      // 11. Delete notifications
+      console.log('11. Deleting notifications...');
       await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
 
-      // 12. Delete persona conversations
+      console.log('12. Deleting persona conversations...');
       await pool.query('DELETE FROM persona_conversations WHERE user_id = $1', [userId]);
 
-      // 13. Delete persona embeddings
+      console.log('13. Deleting persona embeddings...');
       await pool.query('DELETE FROM persona_embeddings WHERE user_id = $1', [userId]);
 
-      // 14. Delete user achievements
+      console.log('14. Deleting user achievements...');
       await pool.query('DELETE FROM user_achievements WHERE user_id = $1', [userId]);
 
-      // 15. Delete push tokens (if table exists)
+      console.log('15. Deleting push tokens...');
       await pool.query('DELETE FROM push_tokens WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 16. Delete notification preferences (if table exists)
+      console.log('16. Deleting notification preferences...');
       await pool.query('DELETE FROM notification_preferences WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 17. Delete notification log (if table exists)
+      console.log('17. Deleting notification log...');
       await pool.query('DELETE FROM notification_log WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 18. Delete user prompt affinity (if table exists)
+      console.log('18. Deleting user prompt affinity...');
       await pool.query('DELETE FROM user_prompt_affinity WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 19. Delete user prompt history (if table exists)
+      console.log('19. Deleting user prompt history...');
       await pool.query('DELETE FROM user_prompt_history WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 20. Delete user daily stats (if table exists)
+      console.log('20. Deleting user daily stats...');
       await pool.query('DELETE FROM user_daily_stats WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 21. Delete prompt ratings (if table exists)
+      console.log('21. Deleting prompt ratings...');
       await pool.query('DELETE FROM prompt_ratings WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 22. Delete user suppressed prompts (if table exists)
+      console.log('22. Deleting user suppressed prompts...');
       await pool.query('DELETE FROM user_suppressed_prompts WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 23. Delete user unlocked gates (if table exists)
+      console.log('23. Deleting user unlocked gates...');
       await pool.query('DELETE FROM user_unlocked_gates WHERE user_id = $1', [userId]).catch(() => {});
 
-      // 24. Delete user profile
+      console.log('24. Deleting user profile...');
       await pool.query('DELETE FROM user_profiles WHERE user_id = $1', [userId]);
 
-      // 25. Finally, delete the user
+      console.log('25. Finally, deleting the user...');
       await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
       // Commit transaction
