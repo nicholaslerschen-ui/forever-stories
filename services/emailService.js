@@ -173,6 +173,16 @@ async function sendInviteEmail(recipientEmail, senderName, inviteCode) {
         <strong>Ready to get started?</strong><br>
         Download the Forever Stories app and create an account using your invite code: <strong>${inviteCode}</strong>
       </p>
+
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="https://foreverstories.app/download" style="display: inline-block; background-color: #e11d48; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
+          📱 Download the App
+        </a>
+      </div>
+
+      <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
+        Available on iOS and Android
+      </p>
     </div>
     <div class="footer">
       <p>Forever Stories • Preserving memories for generations</p>
@@ -196,6 +206,9 @@ What you can do:
 
 Ready to get started?
 Download the Forever Stories app and create an account using your invite code: ${inviteCode}
+
+Download the app: https://foreverstories.app/download
+Available on iOS and Android
 
 ---
 Forever Stories • Preserving memories for generations
