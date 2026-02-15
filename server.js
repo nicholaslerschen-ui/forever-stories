@@ -1058,17 +1058,26 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       console.log('5. Deleting submitted questions (as story owner)...');
       await pool.query('DELETE FROM submitted_questions WHERE story_owner_id = $1', [userId]);
 
-      console.log('6. Deleting access grants (all references)...');
+      console.log('6. Deleting access grants (owner and recipient)...');
       await pool.query(
-        'DELETE FROM access_grants WHERE owner_id = $1 OR recipient_user_id = $1 OR granted_by = $1',
-        [userId, userId, userId]
+        'DELETE FROM access_grants WHERE owner_id = $1 OR recipient_user_id = $1',
+        [userId, userId]
       );
 
-      console.log('8. Deleting reverse invite tokens...');
-      await pool.query(
-        'DELETE FROM reverse_invite_tokens WHERE viewer_id = $1 OR used_by_owner_id = $1',
-        [userId, userId]
-      ).catch(() => {});
+      console.log('6b. Deleting access grants (granted_by - may not exist)...');
+      await pool.query('DELETE FROM access_grants WHERE granted_by = $1', [userId]).catch((e) => {
+        console.log('granted_by column does not exist, skipping...');
+      });
+
+      console.log('8. Deleting reverse invite tokens (viewer_id)...');
+      await pool.query('DELETE FROM reverse_invite_tokens WHERE viewer_id = $1', [userId]).catch((e) => {
+        console.log('reverse_invite_tokens table does not exist, skipping...');
+      });
+
+      console.log('8b. Deleting reverse invite tokens (used_by_owner_id - may not exist)...');
+      await pool.query('DELETE FROM reverse_invite_tokens WHERE used_by_owner_id = $1', [userId]).catch((e) => {
+        console.log('used_by_owner_id column does not exist, skipping...');
+      });
 
       console.log('9. Deleting invite codes...');
       await pool.query('DELETE FROM invite_codes WHERE owner_id = $1', [userId]);
