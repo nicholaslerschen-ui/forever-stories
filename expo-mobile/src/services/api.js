@@ -328,6 +328,23 @@ class ApiService {
     return response.json();
   }
 
+  async deleteAccount(token) {
+    const response = await fetch(`${API_URL}/api/user/account`, {
+      method: 'DELETE',
+      headers: getHeaders(token, false),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      const errorMessage = error.details
+        ? `${error.error}\n\nDetails: ${error.details}\nConstraint: ${error.constraint || 'N/A'}\nTable: ${error.table || 'N/A'}`
+        : error.error || 'Failed to delete account';
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  }
+
   // ===== ACCESS MANAGEMENT =====
 
   async sendInvitation(token, recipientEmail, permissions) {

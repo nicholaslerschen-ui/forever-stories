@@ -1145,11 +1145,23 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
     } catch (error) {
       // Rollback on error
       await pool.query('ROLLBACK');
+      console.error('❌ Transaction error:', error);
+      console.error('Error detail:', error.detail);
+      console.error('Error table:', error.table);
+      console.error('Error constraint:', error.constraint);
       throw error;
     }
   } catch (error) {
     console.error('Delete account error:', error);
-    res.status(500).json({ error: 'Failed to delete account' });
+    console.error('Error message:', error.message);
+    console.error('Error detail:', error.detail);
+    console.error('Error constraint:', error.constraint);
+    res.status(500).json({
+      error: 'Failed to delete account',
+      details: error.message,
+      constraint: error.constraint,
+      table: error.table
+    });
   }
 });
 
