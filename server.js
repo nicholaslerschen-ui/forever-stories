@@ -1073,10 +1073,22 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
       // 10. Delete user stats
       await pool.query('DELETE FROM user_stats WHERE user_id = $1', [userId]);
 
-      // 11. Delete user profile
+      // 11. Delete notifications
+      await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+
+      // 12. Delete persona conversations
+      await pool.query('DELETE FROM persona_conversations WHERE user_id = $1', [userId]);
+
+      // 13. Delete persona embeddings
+      await pool.query('DELETE FROM persona_embeddings WHERE user_id = $1', [userId]);
+
+      // 14. Delete user achievements
+      await pool.query('DELETE FROM user_achievements WHERE user_id = $1', [userId]);
+
+      // 15. Delete user profile
       await pool.query('DELETE FROM user_profiles WHERE user_id = $1', [userId]);
 
-      // 12. Finally, delete the user
+      // 16. Finally, delete the user
       await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
       // Commit transaction
