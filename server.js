@@ -11,7 +11,19 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const cron = require('node-cron');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// ============================================================================
+// ENVIRONMENT VARIABLE VALIDATION
+// ============================================================================
+const requiredEnvVars = ['JWT_SECRET', 'DATABASE_URL'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
 
 // Import prompt selection engine
 const { getNextPrompt, onSkip, onRating, RATING, SKIP_REASON, SELECTION_MODE } = require('./promptSelectionEngine');
@@ -219,12 +231,45 @@ const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Allow external connections
 
 // Middleware
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for static HTML pages
+}));
+
+const allowedOrigins = [
+  'https://www.foreverstories.co',
+  'https://foreverstories.co',
+  'https://distinguished-beauty-production-1e26.up.railway.app'
+];
 app.use(cors({
-  origin: '*',
-  credentials: false
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(null, true); // Allow all for now since mobile app doesn't send origin
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
+
+// Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 signups per hour per IP
+  message: { error: 'Too many signup attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // Serve static files from public folder
 const path = require('path');
@@ -256,7 +301,7 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access denied' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'development-secret-key', (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid token' });
     }
@@ -321,11 +366,19 @@ app.get('/download', (req, res) => {
 const handleSignup = async (req, res) => {
   try {
     console.log('=== SIGNUP REQUEST RECEIVED ===');
-    console.log('Body:', req.body);
+    console.log('Email:', req.body.email);
     const { email, password, fullName, role, reverseInviteCode, termsAccepted } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    if (!/\d/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one number' });
     }
 
     if (!termsAccepted) {
@@ -427,7 +480,7 @@ const handleSignup = async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'development-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
@@ -468,11 +521,11 @@ const handleSignup = async (req, res) => {
   }
 };
 
-app.post('/api/auth/register', handleSignup);
-app.post('/api/auth/signup', handleSignup);
+app.post('/api/auth/register', signupLimiter, handleSignup);
+app.post('/api/auth/signup', signupLimiter, handleSignup);
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -501,7 +554,7 @@ app.post('/api/auth/login', async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'development-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
@@ -964,10 +1017,7 @@ app.delete('/api/user/account', authenticateToken, async (req, res) => {
     console.error('Error detail:', error.detail);
     console.error('Error constraint:', error.constraint);
     res.status(500).json({
-      error: 'Failed to delete account',
-      details: error.message,
-      constraint: error.constraint,
-      table: error.table
+      error: 'Failed to delete account. Please try again or contact support.'
     });
   }
 });
@@ -1959,16 +2009,9 @@ app.post('/api/files/upload', authenticateToken, (req, res, next) => {
   } catch (error) {
     console.error('File upload error:', error);
 
-    // Provide specific error messages
     let errorMessage = 'Failed to upload files';
-    if (error.message.includes('credentials')) {
-      errorMessage = 'AWS credentials not configured';
-    } else if (error.message.includes('bucket')) {
-      errorMessage = 'S3 bucket not accessible';
-    } else if (error.message.includes('size') || error.message.includes('limit')) {
+    if (error.message && (error.message.includes('size') || error.message.includes('limit'))) {
       errorMessage = 'File size exceeds 100MB limit';
-    } else if (error.message) {
-      errorMessage = error.message;
     }
 
     res.status(500).json({ error: errorMessage });
@@ -3027,9 +3070,7 @@ app.post('/api/prompts/skip', authenticateToken, async (req, res) => {
     console.error('Skip prompt error:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({
-      error: 'Failed to skip prompt',
-      details: error.message,
-      code: error.code
+      error: 'Failed to skip prompt'
     });
   }
 });
@@ -3831,7 +3872,7 @@ app.get('/api/debug/response-files/:responseId', authenticateToken, async (req, 
     });
   } catch (error) {
     console.error('Debug query error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
