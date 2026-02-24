@@ -8,7 +8,7 @@ const sesClient = new SESClient({
   }
 });
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@foreverstories.com';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@foreverstories.co';
 
 /**
  * Send welcome email to new users
