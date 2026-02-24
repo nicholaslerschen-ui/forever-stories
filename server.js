@@ -357,6 +357,10 @@ app.get('/download', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'download.html'));
 });
 
+app.get('/sms-terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sms-terms.html'));
+});
+
 // ============================================================================
 // USER AUTHENTICATION
 // ============================================================================
