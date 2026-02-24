@@ -48,13 +48,14 @@ class ApiService {
     });
 
     if (!response.ok) {
+      let errorMessage = 'Signup failed';
       try {
         const error = await response.json();
-        throw new Error(error.error || 'Signup failed');
+        errorMessage = error.error || 'Signup failed';
       } catch (e) {
-        // If response is not JSON (e.g., HTML error page from ngrok)
-        throw new Error('Server is not responding. Please check if the backend is running.');
+        errorMessage = 'Server is not responding. Please check if the backend is running.';
       }
+      throw new Error(errorMessage);
     }
 
     return response.json();

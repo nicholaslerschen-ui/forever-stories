@@ -30,12 +30,12 @@
       "edgeToEdgeEnabled": true,
       "package": "com.foreverstories.app",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS",
-        "READ_CONTACTS"
+        "android.permission.READ_CONTACTS"
       ]
     },
     "web": {
@@ -57,6 +57,12 @@
           "cameraPermission": "Forever Stories needs access to your camera to take photos for your stories."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "39162722-31a2-4ab2-a65d-526a31db063d"
+      }
+    },
+    "owner": "nicklerschen"
   }
 }

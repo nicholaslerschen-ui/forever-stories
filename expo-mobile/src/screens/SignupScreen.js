@@ -30,6 +30,11 @@ export default function SignupScreen({ navigation }) {
       return;
     }
 
+    if (password.length < 8 || !/\d/.test(password)) {
+      Alert.alert('Error', 'Password must be at least 8 characters and contain a number');
+      return;
+    }
+
     if (!termsAccepted) {
       Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
       return;
@@ -159,14 +164,14 @@ export default function SignupScreen({ navigation }) {
             I accept the{' '}
             <Text
               style={styles.link}
-              onPress={() => Linking.openURL('https://foreverstories.co/terms')}
+              onPress={() => Linking.openURL('https://www.foreverstories.co/terms')}
             >
               Terms of Service
             </Text>
             {' '}and{' '}
             <Text
               style={styles.link}
-              onPress={() => Linking.openURL('https://foreverstories.co/privacy')}
+              onPress={() => Linking.openURL('https://www.foreverstories.co/privacy')}
             >
               Privacy Policy
             </Text>
