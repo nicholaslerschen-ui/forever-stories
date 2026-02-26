@@ -1,12 +1,6 @@
-const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+const { Resend } = require('resend');
 
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || 'us-west-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@foreverstories.co';
 
@@ -90,32 +84,16 @@ If you didn't create this account, please ignore this email.
   `;
 
   try {
-    const command = new SendEmailCommand({
-      Source: FROM_EMAIL,
-      Destination: {
-        ToAddresses: [userEmail]
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8'
-        },
-        Body: {
-          Html: {
-            Data: htmlBody,
-            Charset: 'UTF-8'
-          },
-          Text: {
-            Data: textBody,
-            Charset: 'UTF-8'
-          }
-        }
-      }
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [userEmail],
+      subject: subject,
+      html: htmlBody,
+      text: textBody
     });
 
-    const response = await sesClient.send(command);
-    console.log('✅ Welcome email sent to:', userEmail, '- MessageId:', response.MessageId);
-    return { success: true, messageId: response.MessageId };
+    console.log('✅ Welcome email sent to:', userEmail, '- ID:', response.data?.id);
+    return { success: true, messageId: response.data?.id };
   } catch (error) {
     console.error('❌ Failed to send welcome email to:', userEmail, error);
     // Don't throw - we don't want signup to fail if email fails
@@ -211,32 +189,16 @@ Forever Stories • Preserving memories for generations
   `;
 
   try {
-    const command = new SendEmailCommand({
-      Source: FROM_EMAIL,
-      Destination: {
-        ToAddresses: [recipientEmail]
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8'
-        },
-        Body: {
-          Html: {
-            Data: htmlBody,
-            Charset: 'UTF-8'
-          },
-          Text: {
-            Data: textBody,
-            Charset: 'UTF-8'
-          }
-        }
-      }
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [recipientEmail],
+      subject: subject,
+      html: htmlBody,
+      text: textBody
     });
 
-    const response = await sesClient.send(command);
-    console.log('✅ Invite email sent to:', recipientEmail, '- MessageId:', response.MessageId);
-    return { success: true, messageId: response.MessageId };
+    console.log('✅ Invite email sent to:', recipientEmail, '- ID:', response.data?.id);
+    return { success: true, messageId: response.data?.id };
   } catch (error) {
     console.error('❌ Failed to send invite email to:', recipientEmail, error);
     throw error; // Throw here since invite sending should notify user of failures
