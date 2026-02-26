@@ -108,20 +108,11 @@ async function getSignedFileUrl(s3Key) {
 // EMAIL CONFIGURATION & HELPERS
 // ============================================================================
 
-// Email transporter configuration (using Gmail for development)
-let emailTransporter = null;
-
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-  emailTransporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
-  console.log('✉️  Email service configured');
+// Email service configuration (using Resend)
+if (process.env.RESEND_API_KEY) {
+  console.log('✉️  Email service configured (Resend)');
 } else {
-  console.log('⚠️  Email service not configured (EMAIL_USER/EMAIL_PASSWORD missing)');
+  console.log('⚠️  Email service not configured (RESEND_API_KEY missing)');
 }
 
 // Twilio SMS client configuration
@@ -171,14 +162,18 @@ async function sendInviteSMS(recipientPhone, inviteCode, ownerName) {
 
 // Helper: Send reverse invite email (viewer inviting story owner)
 async function sendReverseInviteEmail(recipientEmail, inviteCode, viewerName) {
-  if (!emailTransporter) {
+  if (!process.env.RESEND_API_KEY) {
     console.log('📧 Email not configured, skipping reverse invite email send (code:', inviteCode, ')');
     return;
   }
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || 'noreply@foreverstories.app',
-    to: recipientEmail,
+  const { Resend } = require('resend');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const fromEmail = process.env.EMAIL_FROM || 'noreply@foreverstories.co';
+
+  await resend.emails.send({
+    from: fromEmail,
+    to: [recipientEmail],
     subject: `${viewerName} wants to connect with you on Forever Stories`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -202,9 +197,8 @@ async function sendReverseInviteEmail(recipientEmail, inviteCode, viewerName) {
         <p style="color: #666; font-size: 14px; margin-top: 30px;">This invite code expires in 30 days.</p>
       </div>
     `
-  };
+  });
 
-  await emailTransporter.sendMail(mailOptions);
   console.log('📧 Reverse invite email sent to:', recipientEmail);
 }
 
@@ -1331,7 +1325,7 @@ app.post('/api/invites/send', authenticateToken, async (req, res) => {
       if (deliveryMethod === 'sms' && process.env.TWILIO_ACCOUNT_SID) {
         return res.status(500).json({ error: sendError });
       }
-      if (deliveryMethod === 'email' && process.env.EMAIL_USER) {
+      if (deliveryMethod === 'email' && process.env.RESEND_API_KEY) {
         return res.status(500).json({ error: sendError });
       }
     }
