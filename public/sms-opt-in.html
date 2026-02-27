@@ -46,72 +46,6 @@
             font-weight: bold;
             color: #333;
         }
-        .phone-mockup {
-            background: #1a1a1a;
-            border-radius: 24px;
-            padding: 20px;
-            max-width: 320px;
-            margin: 20px auto;
-            color: white;
-        }
-        .phone-screen {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            color: #333;
-        }
-        .phone-screen h3 {
-            color: #e11d48;
-            margin-top: 0;
-        }
-        .phone-input {
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 10px 0;
-            font-size: 14px;
-            color: #6b7280;
-        }
-        .phone-button {
-            background: #e11d48;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 14px;
-            width: 100%;
-            text-align: center;
-            font-weight: bold;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .consent-text {
-            font-size: 11px;
-            color: #6b7280;
-            text-align: center;
-            margin: 10px 0;
-            line-height: 1.5;
-        }
-        .method-toggle {
-            display: flex;
-            gap: 8px;
-            margin: 10px 0;
-        }
-        .method-btn {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        .method-btn.active {
-            background: #e11d48;
-            color: white;
-        }
-        .method-btn.inactive {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
         .highlight {
             background-color: #fff3cd;
             border: 1px solid #ffc107;
@@ -125,6 +59,22 @@
             padding: 15px;
             margin: 15px 0;
             font-size: 14px;
+        }
+        .screenshot {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .screenshot img {
+            max-width: 300px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid #e5e7eb;
+        }
+        .screenshot-caption {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 8px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -148,60 +98,56 @@
     <div class="step">
         <span class="step-number">1</span>
         <span class="step-title">User Navigates to Invite Screen</span>
-        <p>A logged-in user taps "Invite Loved One" from the app's main menu or settings. This is a deliberate action that requires authentication.</p>
+        <p>A logged-in user taps "Loved Ones Access" from the app's settings. This is a deliberate action that requires authentication. The default delivery method is Email.</p>
+
+        <div class="screenshot">
+            <img src="/screenshots/step1-email-default.png" alt="Forever Stories - Loved Ones Access screen with Email selected as default">
+            <div class="screenshot-caption">Screenshot: Invite screen with Email selected as default delivery method</div>
+        </div>
     </div>
 
     <div class="step">
         <span class="step-number">2</span>
-        <span class="step-title">User Selects SMS as Delivery Method</span>
+        <span class="step-title">User Selects SMS as Delivery Method and Enters Phone Number</span>
 
-        <div class="phone-mockup">
-            <div class="phone-screen">
-                <h3>Invite Loved One</h3>
-                <p style="font-size: 13px; color: #6b7280;">Choose how to send the invitation</p>
-                <div class="method-toggle">
-                    <div class="method-btn inactive">Email</div>
-                    <div class="method-btn active">Text Message</div>
-                </div>
-            </div>
+        <div class="screenshot">
+            <img src="/screenshots/step2-sms-selected.png" alt="Forever Stories - Text Message selected with phone number entered">
+            <div class="screenshot-caption">Screenshot: User selects "Text Message" and enters the recipient's phone number</div>
         </div>
 
-        <p>The user actively selects "Text Message" as the delivery method (email is the default). This is a conscious choice by the user.</p>
+        <p>The user actively selects "Text Message" as the delivery method (email is the default). This is a conscious choice by the user. The user then manually enters the recipient's phone number.</p>
     </div>
 
     <div class="step">
         <span class="step-number">3</span>
-        <span class="step-title">User Enters Recipient's Phone Number</span>
+        <span class="step-title">Consent Disclosure Shown Before Sending</span>
 
-        <div class="phone-mockup">
-            <div class="phone-screen">
-                <h3>Invite Loved One</h3>
-                <p style="font-size: 13px; color: #6b7280;">Their Phone Number</p>
-                <div class="phone-input">+1 (555) 123-4567</div>
-
-                <div class="consent-text">
-                    By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms
-                </div>
-
-                <div class="phone-button">Send Invite</div>
-            </div>
+        <div class="screenshot">
+            <img src="/screenshots/step3-consent-text.png" alt="Forever Stories - SMS consent disclosure text shown before Send button">
+            <div class="screenshot-caption">Screenshot: Consent disclosure text displayed above the "Send via Text" button</div>
         </div>
 
-        <p>The user manually enters the recipient's phone number. <strong>Before tapping "Send Invite"</strong>, the following consent disclosure is displayed:</p>
+        <p><strong>Before tapping "Send via Text"</strong>, the following consent disclosure is clearly displayed on screen:</p>
         <blockquote style="background: #f9fafb; padding: 15px; border-left: 3px solid #e11d48; margin: 15px 0; font-size: 14px;">
             "By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms"
         </blockquote>
+        <p>This disclosure includes: brand name (Forever Stories), message purpose (invite code), data rates notice, STOP opt-out instructions, and a link to SMS Terms and Privacy Policy.</p>
     </div>
 
     <div class="step">
         <span class="step-number">4</span>
-        <span class="step-title">SMS Message is Sent</span>
+        <span class="step-title">SMS Message is Sent (One-Time)</span>
 
-        <p>After tapping "Send Invite", a single SMS message is delivered to the recipient. The message contains:</p>
+        <div class="screenshot">
+            <img src="/screenshots/step4-invitation-sent.png" alt="Forever Stories - Invitation sent confirmation">
+            <div class="screenshot-caption">Screenshot: Confirmation dialog after SMS invitation is sent</div>
+        </div>
+
+        <p>After tapping "Send via Text", a single SMS message is delivered to the recipient. A confirmation dialog is shown. The SMS message contains:</p>
 
         <div class="sms-example">
             <strong>Example SMS:</strong><br>
-            "John Smith has invited you to Forever Stories! Your invite code: ABC12345. Download the app and enter this code to view their stories. Expires in 30 days. Reply STOP to opt out. Msg & data rates may apply."
+            "[Sender Name] has invited you to Forever Stories! Your invite code: [CODE]. Download the app and enter this code to view their stories. Expires in 30 days. Reply STOP to opt out. Msg & data rates may apply."
         </div>
 
         <p>This is a <strong>one-time message</strong>. No follow-up or recurring messages are sent.</p>
