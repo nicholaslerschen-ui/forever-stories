@@ -240,6 +240,12 @@ export default function IntakeInviteScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {inviteMethod === 'sms' && (
+          <Text style={styles.smsConsent}>
+            By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms
+          </Text>
+        )}
+
         <TouchableOpacity
           style={[styles.sendButton, loading && styles.buttonDisabled]}
           onPress={handleSendInvites}
@@ -485,6 +491,14 @@ const styles = StyleSheet.create({
   skipButtonText: {
     color: '#6b7280',
     fontSize: 15,
+  },
+  smsConsent: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    lineHeight: 18,
   },
   spacer: {
     height: 40,

@@ -124,6 +124,12 @@ export default function InviteParentScreen({ navigation }) {
         </>
       )}
 
+      {method === 'sms' && (
+        <Text style={styles.smsConsent}>
+          By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms
+        </Text>
+      )}
+
       <TouchableOpacity
         style={[styles.sendButton, loading && styles.buttonDisabled]}
         onPress={handleSendInvite}
@@ -248,5 +254,13 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 16,
     textDecorationLine: 'underline',
+  },
+  smsConsent: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    lineHeight: 18,
   },
 });
