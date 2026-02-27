@@ -19,7 +19,8 @@
         "NSCameraUsageDescription": "Forever Stories needs access to your camera to capture photos and videos for your stories.",
         "NSPhotoLibraryUsageDescription": "Forever Stories needs access to your photo library to attach photos and videos to your stories.",
         "NSMicrophoneUsageDescription": "Forever Stories needs microphone access to record videos with audio.",
-        "NSContactsUsageDescription": "Forever Stories needs access to your contacts to easily invite family and friends to the app."
+        "NSContactsUsageDescription": "Forever Stories uses your contacts to help you invite family and friends. Selected contact names, emails, or phone numbers will be sent to our server to deliver invitations.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
