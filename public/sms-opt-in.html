@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Opt-In Flow - Forever Stories</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            color: #333;
+        }
+        h1 {
+            color: #e11d48;
+            border-bottom: 3px solid #e11d48;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 35px;
+        }
+        .step {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .step-number {
+            display: inline-block;
+            background: #e11d48;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .step-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .phone-mockup {
+            background: #1a1a1a;
+            border-radius: 24px;
+            padding: 20px;
+            max-width: 320px;
+            margin: 20px auto;
+            color: white;
+        }
+        .phone-screen {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            color: #333;
+        }
+        .phone-screen h3 {
+            color: #e11d48;
+            margin-top: 0;
+        }
+        .phone-input {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .phone-button {
+            background: #e11d48;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .consent-text {
+            font-size: 11px;
+            color: #6b7280;
+            text-align: center;
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .method-toggle {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .method-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .method-btn.active {
+            background: #e11d48;
+            color: white;
+        }
+        .method-btn.inactive {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .sms-example {
+            background: #e8f5e9;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Forever Stories - SMS Opt-In / Call to Action Flow</h1>
+
+    <p>This page documents the complete SMS opt-in process within the Forever Stories mobile app. SMS messages are only sent when an existing user explicitly initiates an invitation to a family member.</p>
+
+    <div class="highlight">
+        <strong>Key Points:</strong>
+        <ul>
+            <li>SMS is <strong>user-initiated only</strong> - a logged-in user must actively choose to send an invite via text message</li>
+            <li>Each recipient receives <strong>only one SMS per invitation</strong> - no recurring messages</li>
+            <li>Clear consent disclosure is shown <strong>before</strong> the user sends the invite</li>
+            <li>Recipients can reply <strong>STOP</strong> to opt out at any time</li>
+        </ul>
+    </div>
+
+    <h2>Step-by-Step SMS Opt-In Flow</h2>
+
+    <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">User Navigates to Invite Screen</span>
+        <p>A logged-in user taps "Invite Loved One" from the app's main menu or settings. This is a deliberate action that requires authentication.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">User Selects SMS as Delivery Method</span>
+
+        <div class="phone-mockup">
+            <div class="phone-screen">
+                <h3>Invite Loved One</h3>
+                <p style="font-size: 13px; color: #6b7280;">Choose how to send the invitation</p>
+                <div class="method-toggle">
+                    <div class="method-btn inactive">Email</div>
+                    <div class="method-btn active">Text Message</div>
+                </div>
+            </div>
+        </div>
+
+        <p>The user actively selects "Text Message" as the delivery method (email is the default). This is a conscious choice by the user.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">User Enters Recipient's Phone Number</span>
+
+        <div class="phone-mockup">
+            <div class="phone-screen">
+                <h3>Invite Loved One</h3>
+                <p style="font-size: 13px; color: #6b7280;">Their Phone Number</p>
+                <div class="phone-input">+1 (555) 123-4567</div>
+
+                <div class="consent-text">
+                    By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms
+                </div>
+
+                <div class="phone-button">Send Invite</div>
+            </div>
+        </div>
+
+        <p>The user manually enters the recipient's phone number. <strong>Before tapping "Send Invite"</strong>, the following consent disclosure is displayed:</p>
+        <blockquote style="background: #f9fafb; padding: 15px; border-left: 3px solid #e11d48; margin: 15px 0; font-size: 14px;">
+            "By sending this invite, the recipient will receive an SMS message from Forever Stories with an invite code. Message and data rates may apply. Recipients can reply STOP to opt out. See our SMS Terms and Privacy Policy at www.foreverstories.co/sms-terms"
+        </blockquote>
+    </div>
+
+    <div class="step">
+        <span class="step-number">4</span>
+        <span class="step-title">SMS Message is Sent</span>
+
+        <p>After tapping "Send Invite", a single SMS message is delivered to the recipient. The message contains:</p>
+
+        <div class="sms-example">
+            <strong>Example SMS:</strong><br>
+            "John Smith has invited you to Forever Stories! Your invite code: ABC12345. Download the app and enter this code to view their stories. Expires in 30 days. Reply STOP to opt out. Msg & data rates may apply."
+        </div>
+
+        <p>This is a <strong>one-time message</strong>. No follow-up or recurring messages are sent.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">5</span>
+        <span class="step-title">Opt-Out Mechanism</span>
+        <p>Recipients can reply <strong>STOP</strong> to immediately opt out of any future messages. They can also reply <strong>HELP</strong> for assistance.</p>
+    </div>
+
+    <h2>Compliance Summary</h2>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f3f4f6;">
+            <th style="padding: 12px; text-align: left; border: 1px solid #d1d5db;">Requirement</th>
+            <th style="padding: 12px; text-align: left; border: 1px solid #d1d5db;">Implementation</th>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Clear opt-in</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">User manually enters phone number and taps Send Invite</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Consent disclosure</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Shown on screen before sending, includes brand name, message purpose, rates disclaimer, opt-out instructions</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Brand identification</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">"Forever Stories" identified in consent text and SMS message</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Message frequency</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">One message per invitation (no recurring messages)</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Msg & data rates</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Disclosed in consent text and SMS message</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">STOP opt-out</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Disclosed in consent text and included in SMS message</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Privacy policy</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;"><a href="/privacy">www.foreverstories.co/privacy</a> (Section 4.6 covers SMS)</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">SMS Terms</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;"><a href="/sms-terms">www.foreverstories.co/sms-terms</a></td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">No data sharing</td>
+            <td style="padding: 12px; border: 1px solid #d1d5db;">Privacy policy states mobile opt-in data will not be shared/sold to third parties</td>
+        </tr>
+    </table>
+
+    <h2>Related Documents</h2>
+    <ul>
+        <li><a href="/sms-terms">SMS Terms & Conditions</a></li>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="/terms">Terms of Service</a></li>
+    </ul>
+
+    <p style="color: #6b7280; font-size: 14px; margin-top: 40px;">Last updated: February 2026 | Forever Stories | Contact: support@foreverstories.co</p>
+</body>
+</html>
