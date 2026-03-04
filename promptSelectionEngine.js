@@ -33,8 +33,20 @@ const SELECTION_MODE = {
  */
 async function getNextPrompt(pool, userId, mode = SELECTION_MODE.NORMAL) {
   try {
-    // 1. Get user's daily stats
-    const today = new Date().toISOString().split('T')[0];
+    // 1. Get user's daily stats (use user's timezone for correct date)
+    const userProfile = await pool.query(
+      'SELECT timezone FROM user_profiles WHERE user_id = $1',
+      [userId]
+    );
+    const userTimezone = userProfile.rows[0]?.timezone || 'America/Phoenix';
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: userTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const today = formatter.format(now); // YYYY-MM-DD in user's timezone
     const dailyStats = await getDailyStats(pool, userId, today);
 
     // 2. Get user's total response count (for onboarding prioritization)
@@ -143,7 +155,20 @@ async function buildEligiblePool(pool, userId, dailyStats, mode, filterOptions =
     cooldownDays = 15
   } = filterOptions;
 
-  const today = new Date().toISOString().split('T')[0];
+  // Use user's timezone for correct date calculation
+  const userProfile = await pool.query(
+    'SELECT timezone FROM user_profiles WHERE user_id = $1',
+    [userId]
+  );
+  const userTimezone = userProfile.rows[0]?.timezone || 'America/Phoenix';
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: userTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const today = formatter.format(now);
 
   // Base query
   let query = `
