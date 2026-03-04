@@ -281,8 +281,16 @@ export default function DailyPromptScreen({ navigation, route }) {
         <View style={styles.centered}>
           <Text style={[styles.title, { fontSize: getFontSize(28) }]}>✅ All Done!</Text>
           <Text style={[styles.message, { fontSize: getFontSize(16) }]}>
-            You've answered today's prompt. Come back tomorrow for a new one!
+            You've answered today's prompt. Great job!
           </Text>
+          <TouchableOpacity
+            style={styles.anotherPromptButton}
+            onPress={() => navigation.replace('DailyPrompt', { mode: 'another' })}
+          >
+            <Text style={[styles.anotherPromptButtonText, { fontSize: getFontSize(16) }]}>
+              ✍️ Answer Another Prompt
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -369,8 +377,23 @@ export default function DailyPromptScreen({ navigation, route }) {
       ) : (
         <View style={styles.centered}>
           <Text style={[styles.message, { fontSize: getFontSize(16) }]}>
-            Come back tomorrow for new prompts, or explore your existing stories!
+            No new prompts available right now.
           </Text>
+          <TouchableOpacity
+            style={styles.anotherPromptButton}
+            onPress={() => navigation.replace('DailyPrompt', { mode: 'another' })}
+          >
+            <Text style={[styles.anotherPromptButtonText, { fontSize: getFontSize(16) }]}>
+              ✍️ Try Another Prompt
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MyStories')}
+          >
+            <Text style={[styles.exploreLink, { fontSize: getFontSize(14) }]}>
+              Or explore your existing stories
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -527,5 +550,22 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 20,
     paddingHorizontal: 40,
+  },
+  anotherPromptButton: {
+    backgroundColor: '#e11d48',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    marginTop: 24,
+  },
+  anotherPromptButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  exploreLink: {
+    color: '#e11d48',
+    marginTop: 16,
+    textDecorationLine: 'underline',
   },
 });

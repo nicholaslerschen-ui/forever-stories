@@ -19,6 +19,7 @@ export default function AccountScreen({ navigation }) {
   const [accessGrants, setAccessGrants] = useState([]);
   const [submittedQuestions, setSubmittedQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadAccountData();
@@ -63,6 +64,72 @@ export default function AccountScreen({ navigation }) {
             // Only remove auth token, preserve notification preferences
             await AsyncStorage.removeItem('authToken');
             navigation.replace('Login');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete:\n\n• All your stories and memories\n• All photos and videos\n• All responses and data\n• Access for family members\n\nThis action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => confirmDeleteAccount(),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Final Confirmation',
+      'Please confirm one more time that you want to permanently delete your account and all data.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes, Delete Everything',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const token = await AsyncStorage.getItem('authToken');
+              await ApiService.deleteAccount(token);
+
+              // Clear all local data
+              await AsyncStorage.clear();
+
+              Alert.alert(
+                'Account Deleted',
+                'Your account and all data have been permanently deleted.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Navigate to login screen
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
+                    },
+                  },
+                ]
+              );
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to delete account');
+            } finally {
+              setDeleting(false);
+            }
           },
         },
       ]
@@ -204,7 +271,18 @@ export default function AccountScreen({ navigation }) {
 
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
+        <Text style={[styles.logoutText, { fontSize: getFontSize(16) }]}>Logout</Text>
+      </TouchableOpacity>
+
+      {/* Delete Account Button */}
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={handleDeleteAccount}
+        disabled={deleting}
+      >
+        <Text style={[styles.deleteButtonText, { fontSize: getFontSize(13) }]}>
+          Delete Account
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.spacer} />
@@ -310,6 +388,17 @@ const styles = StyleSheet.create({
     color: '#e11d48',
     fontWeight: '500',
   },
+  deleteButton: {
+    marginHorizontal: 60,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  deleteButtonText: {
+    color: '#999',
+    fontSize: 13,
+  },
   logoutButton: {
     marginHorizontal: 20,
     padding: 15,
@@ -317,7 +406,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e11d48',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 15,
   },
   logoutText: {
     color: '#e11d48',
