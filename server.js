@@ -2147,8 +2147,52 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
 
     // STEP 3: Use new weighted prompt selection engine
     const selectedPrompt = await getNextPrompt(pool, userId);
+    console.log('Selected prompt result:', selectedPrompt ? { id: selectedPrompt.id, needsChoice: selectedPrompt.needsChoice, question: selectedPrompt.prompt_text?.substring(0, 50) } : 'null/undefined');
 
-    if (selectedPrompt) {
+    if (selectedPrompt && selectedPrompt.needsChoice) {
+      // Handle rescue mode / choice mode from selection engine
+      // Return first choice or option as the prompt
+      if (selectedPrompt.choices && selectedPrompt.choices.length > 0) {
+        const choice = selectedPrompt.choices[0];
+        res.json({
+          answered: false,
+          prompt: {
+            id: choice.id,
+            question: choice.prompt_text,
+            category: choice.domain,
+            type: choice.story_type,
+            domain: choice.domain,
+            story_type: choice.story_type,
+            emotional_weight: choice.emotional_weight,
+            depth: choice.depth,
+            requires_gate: choice.requires_gate,
+            gate_tag: choice.gate_tag
+          }
+        });
+      } else {
+        // Rescue mode options - just get a new prompt in rescue_light mode
+        const rescuePrompt = await getNextPrompt(pool, userId, 'rescue_light');
+        if (rescuePrompt && rescuePrompt.id) {
+          res.json({
+            answered: false,
+            prompt: {
+              id: rescuePrompt.id,
+              question: rescuePrompt.prompt_text,
+              category: rescuePrompt.domain,
+              type: rescuePrompt.story_type,
+              domain: rescuePrompt.domain,
+              story_type: rescuePrompt.story_type,
+              emotional_weight: rescuePrompt.emotional_weight,
+              depth: rescuePrompt.depth,
+              requires_gate: rescuePrompt.requires_gate,
+              gate_tag: rescuePrompt.gate_tag
+            }
+          });
+        } else {
+          res.json({ answered: false, prompt: { id: null, question: "No prompts available right now.", category: "general", type: "reflection" } });
+        }
+      }
+    } else if (selectedPrompt && selectedPrompt.id) {
       res.json({
         answered: false,
         prompt: {
@@ -2166,11 +2210,12 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
       });
     } else {
       // No prompts available
+      console.log('No prompt available for user:', userId);
       res.json({
         answered: false,
         prompt: {
           id: null,
-          question: "You've answered all available prompts! Check back tomorrow for new prompts.",
+          question: "No prompts available right now.",
           category: "general",
           type: "reflection",
           domain: "Identity",
@@ -2182,6 +2227,37 @@ app.get('/api/prompts/today', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get today prompt error:', error);
     res.status(500).json({ error: 'Failed to get prompt' });
+  }
+});
+
+// Debug endpoint - check prompt selection state
+app.get('/api/prompts/debug', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const [totalPrompts, answered, history, recentHistory, suppressed, nonGated, dailyStats, userTz] = await Promise.all([
+      pool.query('SELECT COUNT(*) as cnt FROM prompts WHERE is_active = TRUE'),
+      pool.query('SELECT COUNT(*) as cnt FROM prompt_responses WHERE user_id = $1', [userId]),
+      pool.query('SELECT COUNT(*) as cnt FROM user_prompt_history WHERE user_id = $1', [userId]),
+      pool.query("SELECT COUNT(*) as cnt FROM user_prompt_history WHERE user_id = $1 AND shown_at > NOW() - INTERVAL '15 days'", [userId]),
+      pool.query('SELECT * FROM user_suppressed_prompts WHERE user_id = $1', [userId]),
+      pool.query('SELECT COUNT(*) as cnt FROM prompts WHERE is_active = TRUE AND requires_gate = FALSE AND id NOT IN (SELECT prompt_id FROM prompt_responses WHERE user_id = $1 AND prompt_id IS NOT NULL)', [userId]),
+      pool.query('SELECT * FROM user_daily_stats WHERE user_id = $1 ORDER BY stat_date DESC LIMIT 5', [userId]),
+      pool.query('SELECT timezone FROM user_profiles WHERE user_id = $1', [userId]),
+    ]);
+
+    res.json({
+      active_prompts: totalPrompts.rows[0].cnt,
+      prompts_answered: answered.rows[0].cnt,
+      total_history_entries: history.rows[0].cnt,
+      history_last_15_days: recentHistory.rows[0].cnt,
+      suppressed_entries: suppressed.rows,
+      non_gated_unanswered: nonGated.rows[0].cnt,
+      recent_daily_stats: dailyStats.rows,
+      user_timezone: userTz.rows[0]?.timezone || 'not set',
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
