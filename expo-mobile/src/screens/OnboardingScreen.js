@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -142,6 +143,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 40,
   },
   header: {
