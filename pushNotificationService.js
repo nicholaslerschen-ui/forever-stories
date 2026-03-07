@@ -1,137 +1,108 @@
-// pushNotificationService.js - Firebase Cloud Messaging (FCM) service for sending push notifications
+// pushNotificationService.js - Expo Push Notification service for sending push notifications
 
-const { GoogleAuth } = require('google-auth-library');
-const https = require('https');
-require('dotenv').config();
+const { Expo } = require('expo-server-sdk');
 
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-const GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-// Initialize Google Auth for FCM V1 API
-const auth = new GoogleAuth({
-  keyFile: GOOGLE_APPLICATION_CREDENTIALS,
-  scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
-});
-
-const FCM_V1_ENDPOINT = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
+// Create a new Expo SDK client
+const expo = new Expo();
 
 /**
- * Send push notification via Firebase Cloud Messaging V1 API
- * @param {string} deviceToken - FCM device token
+ * Send push notification via Expo Push API
+ * @param {string} pushToken - Expo push token (ExponentPushToken[...])
  * @param {object} notification - {title, body, data}
  * @returns {Promise<boolean>} - Success status
  */
-async function sendFCMNotification(deviceToken, notification) {
-  if (!GOOGLE_APPLICATION_CREDENTIALS || !FIREBASE_PROJECT_ID) {
-    console.warn('⚠️ Firebase credentials not configured. Skipping notification send.');
+async function sendPushNotification(pushToken, notification) {
+  if (!Expo.isExpoPushToken(pushToken)) {
+    console.warn(`⚠️ Invalid Expo push token: ${pushToken}`);
     return false;
   }
 
   try {
-    // Get access token from service account
-    const client = await auth.getClient();
-    const accessToken = await client.getAccessToken();
-
-    if (!accessToken.token) {
-      console.error('❌ Failed to get access token');
-      return false;
-    }
-
-    // FCM V1 API payload format
-    const payload = JSON.stringify({
-      message: {
-        token: deviceToken,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        data: notification.data || {},
-        apns: {
-          payload: {
-            aps: {
-              sound: 'default',
-              badge: 1,
-              'content-available': 1
-            }
-          }
-        },
-        android: {
-          priority: 'high',
-          notification: {
-            sound: 'default'
-          }
-        }
-      }
-    });
-
-    const url = new URL(FCM_V1_ENDPOINT);
-
-    const options = {
-      hostname: url.hostname,
-      path: url.pathname,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken.token}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      }
+    const message = {
+      to: pushToken,
+      sound: 'default',
+      title: notification.title,
+      body: notification.body,
+      data: notification.data || {},
     };
 
-    return new Promise((resolve, reject) => {
-      const req = https.request(options, (res) => {
-        let data = '';
+    const chunks = expo.chunkPushNotifications([message]);
 
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const response = JSON.parse(data);
-            if (res.statusCode === 200) {
-              console.log('✅ FCM notification sent successfully:', response.name);
-              resolve(true);
-            } else {
-              console.error('❌ FCM notification failed:', res.statusCode, response);
-              resolve(false);
-            }
-          } catch (error) {
-            console.error('Error parsing FCM response:', error);
-            resolve(false);
+    for (const chunk of chunks) {
+      const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+      for (const ticket of ticketChunk) {
+        if (ticket.status === 'ok') {
+          console.log('✅ Push notification sent successfully');
+          return true;
+        } else if (ticket.status === 'error') {
+          console.error(`❌ Push notification error: ${ticket.message}`);
+          if (ticket.details && ticket.details.error === 'DeviceNotRegistered') {
+            console.log('Device not registered - token should be removed');
           }
-        });
-      });
+          return false;
+        }
+      }
+    }
 
-      req.on('error', (error) => {
-        console.error('FCM request error:', error);
-        resolve(false);
-      });
-
-      req.write(payload);
-      req.end();
-    });
+    return true;
   } catch (error) {
-    console.error('Error sending FCM notification:', error);
+    console.error('Error sending push notification:', error);
     return false;
   }
 }
 
 /**
  * Send push notification to multiple devices
- * @param {Array<string>} deviceTokens - Array of FCM device tokens
+ * @param {Array<string>} pushTokens - Array of Expo push tokens
  * @param {object} notification - {title, body, data}
  * @returns {Promise<{sent: number, failed: number}>}
  */
-async function sendBulkNotifications(deviceTokens, notification) {
-  const results = await Promise.allSettled(
-    deviceTokens.map(token => sendFCMNotification(token, notification))
-  );
+async function sendBulkNotifications(pushTokens, notification) {
+  // Filter to only valid Expo push tokens
+  const validTokens = pushTokens.filter(token => Expo.isExpoPushToken(token));
+  const invalidCount = pushTokens.length - validTokens.length;
 
-  const sent = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
-  const failed = results.length - sent;
+  if (invalidCount > 0) {
+    console.warn(`⚠️ Skipped ${invalidCount} invalid push tokens`);
+  }
+
+  if (validTokens.length === 0) {
+    console.log('No valid push tokens to send to');
+    return { sent: 0, failed: pushTokens.length };
+  }
+
+  const messages = validTokens.map(token => ({
+    to: token,
+    sound: 'default',
+    title: notification.title,
+    body: notification.body,
+    data: notification.data || {},
+  }));
+
+  const chunks = expo.chunkPushNotifications(messages);
+  let sent = 0;
+  let failed = 0;
+
+  for (const chunk of chunks) {
+    try {
+      const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+      for (const ticket of ticketChunk) {
+        if (ticket.status === 'ok') {
+          sent++;
+        } else {
+          failed++;
+          if (ticket.details && ticket.details.error) {
+            console.error(`Push error: ${ticket.details.error} - ${ticket.message}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending chunk:', error);
+      failed += chunk.length;
+    }
+  }
 
   console.log(`📊 Bulk notification results: ${sent} sent, ${failed} failed`);
-
   return { sent, failed };
 }
 
@@ -143,7 +114,6 @@ async function sendBulkNotifications(deviceTokens, notification) {
  */
 async function sendDailyPromptNotification(pool, userId, promptText = '') {
   try {
-    // Get user's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -155,7 +125,6 @@ async function sendDailyPromptNotification(pool, userId, promptText = '') {
       return;
     }
 
-    // Check notification preferences
     const prefsResult = await pool.query(
       `SELECT daily_prompt_enabled, notifications_enabled
        FROM notification_preferences
@@ -182,7 +151,6 @@ async function sendDailyPromptNotification(pool, userId, promptText = '') {
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -203,7 +171,6 @@ async function sendDailyPromptNotification(pool, userId, promptText = '') {
  */
 async function sendFamilyQuestionNotification(pool, ownerId, submitterName, questionId) {
   try {
-    // Get owner's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -215,7 +182,6 @@ async function sendFamilyQuestionNotification(pool, ownerId, submitterName, ques
       return;
     }
 
-    // Check notification preferences
     const prefsResult = await pool.query(
       `SELECT family_questions_enabled, notifications_enabled
        FROM notification_preferences
@@ -232,7 +198,7 @@ async function sendFamilyQuestionNotification(pool, ownerId, submitterName, ques
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
     const notification = {
-      title: "❤️ New question from your family",
+      title: "New question from your family",
       body: `${submitterName} asked you a question`,
       data: {
         type: 'family_question',
@@ -243,7 +209,6 @@ async function sendFamilyQuestionNotification(pool, ownerId, submitterName, ques
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -264,7 +229,6 @@ async function sendFamilyQuestionNotification(pool, ownerId, submitterName, ques
  */
 async function sendResponseReceivedNotification(pool, viewerId, ownerName, responseId) {
   try {
-    // Get viewer's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -276,7 +240,6 @@ async function sendResponseReceivedNotification(pool, viewerId, ownerName, respo
       return;
     }
 
-    // Check notification preferences
     const prefsResult = await pool.query(
       `SELECT responses_received_enabled, notifications_enabled
        FROM notification_preferences
@@ -293,7 +256,7 @@ async function sendResponseReceivedNotification(pool, viewerId, ownerName, respo
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
     const notification = {
-      title: "✅ New story from " + ownerName,
+      title: "New story from " + ownerName,
       body: `${ownerName} answered your question!`,
       data: {
         type: 'response_received',
@@ -304,7 +267,6 @@ async function sendResponseReceivedNotification(pool, viewerId, ownerName, respo
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -324,7 +286,6 @@ async function sendResponseReceivedNotification(pool, viewerId, ownerName, respo
  */
 async function sendStreakReminderNotification(pool, userId, streakDays) {
   try {
-    // Get user's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -335,7 +296,6 @@ async function sendStreakReminderNotification(pool, userId, streakDays) {
       return;
     }
 
-    // Check notification preferences
     const prefsResult = await pool.query(
       `SELECT streak_reminders_enabled, notifications_enabled
        FROM notification_preferences
@@ -351,7 +311,7 @@ async function sendStreakReminderNotification(pool, userId, streakDays) {
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
     const notification = {
-      title: `🔥 ${streakDays} day streak!`,
+      title: `${streakDays} day streak!`,
       body: "Don't break your streak! Answer today's prompt",
       data: {
         type: 'streak_reminder',
@@ -362,7 +322,6 @@ async function sendStreakReminderNotification(pool, userId, streakDays) {
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -384,7 +343,6 @@ async function sendStreakReminderNotification(pool, userId, streakDays) {
  */
 async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, isReverseInvite = false) {
   try {
-    // Find viewer user by email
     const userResult = await pool.query(
       `SELECT id FROM users WHERE email = $1`,
       [viewerEmail]
@@ -397,7 +355,6 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
 
     const viewerId = userResult.rows[0].id;
 
-    // Get viewer's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -409,7 +366,6 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
       return;
     }
 
-    // Check notification preferences
     const prefsResult = await pool.query(
       `SELECT invites_enabled, notifications_enabled
        FROM notification_preferences
@@ -425,9 +381,8 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
 
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
-    // Different message for reverse invites (viewer → owner)
     const notification = isReverseInvite ? {
-      title: "🎉 You've been invited!",
+      title: "You've been invited!",
       body: `${ownerName} wants to hear your life stories`,
       data: {
         type: 'invite_received',
@@ -436,7 +391,7 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
         isReverseInvite: 'true'
       }
     } : {
-      title: "🎉 You've been invited!",
+      title: "You've been invited!",
       body: `${ownerName} invited you to view their life stories`,
       data: {
         type: 'invite_received',
@@ -447,7 +402,6 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -462,12 +416,10 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
 /**
  * Send reminder to users who haven't answered today's prompt
  * This should be called by a scheduled job (e.g., cron) in the evening
- * Combines daily reminder + streak reminder into one notification
  * @param {object} pool - PostgreSQL pool
  */
 async function sendDailyPromptReminders(pool) {
   try {
-    // Find all owner users who haven't answered today's prompt, with their streak info
     const today = new Date().toISOString().split('T')[0];
 
     const usersResult = await pool.query(
@@ -503,7 +455,6 @@ async function sendDailyPromptReminders(pool) {
  */
 async function sendDailyPromptReminderNotification(pool, userId, userName, streak) {
   try {
-    // Get user's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -514,7 +465,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
       return;
     }
 
-    // Check notification preferences including cooldown fields
     const prefsResult = await pool.query(
       `SELECT daily_prompt_enabled, notifications_enabled, consecutive_skips,
               in_cooldown, cooldown_until, final_reminder_sent, last_reminder_sent_at
@@ -534,13 +484,11 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
     if (prefs.in_cooldown) {
       const cooldownUntil = new Date(prefs.cooldown_until);
 
-      // If cooldown period is over and final reminder hasn't been sent yet
       if (now >= cooldownUntil && !prefs.final_reminder_sent) {
-        // Send final "we miss you" reminder
         const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
         const notification = {
-          title: "💙 We miss your stories",
+          title: "We miss your stories",
           body: "It's been a while! Your memories are precious. Share one today?",
           data: {
             type: 'final_reminder',
@@ -550,7 +498,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
 
         await sendBulkNotifications(deviceTokens, notification);
 
-        // Mark final reminder as sent
         await pool.query(
           `UPDATE notification_preferences
            SET final_reminder_sent = TRUE, last_reminder_sent_at = NOW()
@@ -558,7 +505,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
           [userId]
         );
 
-        // Log notification
         await pool.query(
           `INSERT INTO notification_log (user_id, notification_type, title, body, data)
            VALUES ($1, $2, $3, $4, $5)`,
@@ -568,22 +514,19 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
         console.log(`Sent final reminder to user ${userId} after cooldown`);
       }
 
-      // Don't send regular reminders if in cooldown
       return;
     }
 
-    // If final reminder was already sent, don't send any more notifications
     if (prefs.final_reminder_sent) {
       return;
     }
 
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
-    // Choose notification based on streak
     let notification;
     if (streak >= 5) {
       notification = {
-        title: `🔥 Keep your ${streak} day streak alive!`,
+        title: `Keep your ${streak} day streak alive!`,
         body: "Don't break your streak! Answer today's prompt",
         data: {
           type: 'daily_reminder',
@@ -593,7 +536,7 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
       };
     } else {
       notification = {
-        title: "📖 Your daily story awaits",
+        title: "Your daily story awaits",
         body: "Take a moment to answer today's prompt and preserve your memories",
         data: {
           type: 'daily_reminder',
@@ -604,13 +547,11 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Increment consecutive skips
     const newConsecutiveSkips = (prefs.consecutive_skips || 0) + 1;
 
-    // If user has skipped 3 times in a row, enter cooldown period
     if (newConsecutiveSkips >= 3) {
       const cooldownUntil = new Date();
-      cooldownUntil.setDate(cooldownUntil.getDate() + 7); // 7 days from now
+      cooldownUntil.setDate(cooldownUntil.getDate() + 7);
 
       await pool.query(
         `UPDATE notification_preferences
@@ -624,7 +565,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
 
       console.log(`User ${userId} entered cooldown after 3 consecutive skips. Cooldown until ${cooldownUntil.toISOString()}`);
     } else {
-      // Just increment consecutive skips
       await pool.query(
         `UPDATE notification_preferences
          SET consecutive_skips = $1, last_reminder_sent_at = NOW()
@@ -633,7 +573,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
       );
     }
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -647,7 +586,6 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
 
 /**
  * Reset notification cooldown when user submits a response
- * Call this whenever a user successfully submits a prompt response
  * @param {object} pool - PostgreSQL pool
  * @param {string} userId - User ID
  */
@@ -669,16 +607,11 @@ async function resetNotificationCooldown(pool, userId) {
 }
 
 /**
- * Send weekly reminder to viewers to submit questions to their family/friends
- * This should be called by a scheduled job (e.g., cron) once per week
+ * Send weekly reminder to viewers to submit questions
  * @param {object} pool - PostgreSQL pool
  */
 async function sendWeeklyViewerReminders(pool) {
   try {
-    // Find all viewers who:
-    // 1. Are viewers (have role='viewer')
-    // 2. Have access to at least one owner
-    // 3. Haven't submitted a question in the last 7 days
     const viewersResult = await pool.query(
       `SELECT DISTINCT u.id, u.full_name
        FROM users u
@@ -716,7 +649,6 @@ async function sendWeeklyViewerReminders(pool) {
  */
 async function sendViewerReminderNotification(pool, viewerId, viewerName) {
   try {
-    // Get viewer's active device tokens
     const tokensResult = await pool.query(
       `SELECT device_token FROM push_tokens
        WHERE user_id = $1 AND is_active = TRUE`,
@@ -727,7 +659,6 @@ async function sendViewerReminderNotification(pool, viewerId, viewerName) {
       return;
     }
 
-    // Check notification preferences - viewer_reminders_enabled
     const prefsResult = await pool.query(
       `SELECT notifications_enabled, viewer_reminders_enabled
        FROM notification_preferences
@@ -741,7 +672,6 @@ async function sendViewerReminderNotification(pool, viewerId, viewerName) {
       return;
     }
 
-    // Get the names of owners they have access to
     const ownersResult = await pool.query(
       `SELECT u.full_name
        FROM users u
@@ -761,7 +691,7 @@ async function sendViewerReminderNotification(pool, viewerId, viewerName) {
     const deviceTokens = tokensResult.rows.map(r => r.device_token);
 
     const notification = {
-      title: "💭 Ask a question",
+      title: "Ask a question",
       body: `What would you like to know about ${ownerText}? Submit a question for them to answer!`,
       data: {
         type: 'viewer_reminder',
@@ -771,7 +701,6 @@ async function sendViewerReminderNotification(pool, viewerId, viewerName) {
 
     await sendBulkNotifications(deviceTokens, notification);
 
-    // Log notification
     await pool.query(
       `INSERT INTO notification_log (user_id, notification_type, title, body, data)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -786,7 +715,7 @@ async function sendViewerReminderNotification(pool, viewerId, viewerName) {
 }
 
 module.exports = {
-  sendFCMNotification,
+  sendPushNotification,
   sendBulkNotifications,
   sendDailyPromptNotification,
   sendFamilyQuestionNotification,
