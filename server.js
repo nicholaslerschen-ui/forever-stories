@@ -3852,20 +3852,23 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'No active device tokens found' });
     }
 
-    // Send notification (implementation depends on having FCM server key)
-    const notifications = tokensResult.rows.map(row => ({
-      token: row.device_token,
-      type: row.device_type
-    }));
+    const deviceTokens = tokensResult.rows.map(row => row.device_token);
 
-    console.log(`📨 Would send test notification to ${notifications.length} device(s)`);
-    console.log('Title:', title);
-    console.log('Body:', body);
+    console.log(`📨 Sending test notification to ${deviceTokens.length} device(s)`);
+
+    const { sendBulkNotifications } = require('./pushNotificationService');
+    const result = await sendBulkNotifications(deviceTokens, {
+      title,
+      body,
+      data: { type: 'test' }
+    });
 
     res.json({
       success: true,
-      message: `Notification queued for ${notifications.length} device(s)`,
-      devices: notifications
+      message: `Notification sent to ${result.sent} device(s), ${result.failed} failed`,
+      tokens: deviceTokens.length,
+      sent: result.sent,
+      failed: result.failed
     });
   } catch (error) {
     console.error('Test notification error:', error);
