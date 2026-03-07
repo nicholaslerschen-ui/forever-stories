@@ -3876,6 +3876,20 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
   }
 });
 
+// Debug: Check push tokens for current user
+app.get('/api/notifications/tokens', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const tokensResult = await pool.query(
+      `SELECT device_token, device_type, is_active, last_used_at, created_at FROM push_tokens WHERE user_id = $1`,
+      [userId]
+    );
+    res.json({ count: tokensResult.rows.length, tokens: tokensResult.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Trigger daily prompt reminders (to be called by cron job)
 // POST /api/notifications/send-daily-reminders
 app.post('/api/notifications/send-daily-reminders', async (req, res) => {
