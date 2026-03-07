@@ -571,7 +571,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed', debug: error.message });
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
