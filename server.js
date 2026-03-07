@@ -3838,41 +3838,30 @@ app.put('/api/notifications/preferences', authenticateToken, async (req, res) =>
 
 // Test endpoint to send a push notification
 app.post('/api/notifications/test', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { title = 'Test Notification', body = 'This is a test' } = req.body;
+  const userId = req.user.userId;
+  const { title = 'Test Notification', body = 'This is a test' } = req.body;
 
-    // Get user's device tokens
+  try {
+    // Step 1: Get tokens
     const tokensResult = await pool.query(
-      `SELECT device_token, device_type FROM push_tokens
-       WHERE user_id = $1 AND is_active = TRUE`,
+      `SELECT device_token, device_type FROM push_tokens WHERE user_id = $1 AND is_active = TRUE`,
       [userId]
     );
 
     if (tokensResult.rows.length === 0) {
-      return res.status(404).json({ error: 'No active device tokens found' });
+      return res.json({ error: 'No active device tokens found', step: 'query' });
     }
 
     const deviceTokens = tokensResult.rows.map(row => row.device_token);
+    console.log(`Sending test notification to ${deviceTokens.length} device(s):`, deviceTokens);
 
-    console.log(`📨 Sending test notification to ${deviceTokens.length} device(s)`);
+    // Step 2: Send via Expo
+    const result = await sendBulkNotifications(deviceTokens, { title, body, data: { type: 'test' } });
 
-    const result = await sendBulkNotifications(deviceTokens, {
-      title,
-      body,
-      data: { type: 'test' }
-    });
-
-    res.json({
-      success: true,
-      message: `Notification sent to ${result.sent} device(s), ${result.failed} failed`,
-      tokens: deviceTokens.length,
-      sent: result.sent,
-      failed: result.failed
-    });
+    return res.json({ success: true, sent: result.sent, failed: result.failed, tokens: deviceTokens });
   } catch (error) {
-    console.error('Test notification error:', error);
-    res.status(500).json({ error: 'Failed to send test notification', details: error.message });
+    console.error('Test notification error:', error.stack || error);
+    return res.json({ error: error.message, stack: error.stack });
   }
 });
 
