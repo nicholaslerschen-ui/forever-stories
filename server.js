@@ -30,6 +30,7 @@ const { getNextPrompt, onSkip, onRating, RATING, SKIP_REASON, SELECTION_MODE } =
 
 // Import push notification service
 const {
+  sendBulkNotifications,
   sendFamilyQuestionNotification,
   sendResponseReceivedNotification,
   sendInviteNotification,
@@ -3856,7 +3857,6 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
 
     console.log(`📨 Sending test notification to ${deviceTokens.length} device(s)`);
 
-    const { sendBulkNotifications } = require('./pushNotificationService');
     const result = await sendBulkNotifications(deviceTokens, {
       title,
       body,
@@ -3872,7 +3872,7 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Test notification error:', error);
-    res.status(500).json({ error: 'Failed to send test notification' });
+    res.status(500).json({ error: 'Failed to send test notification', details: error.message });
   }
 });
 
