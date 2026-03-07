@@ -3977,9 +3977,9 @@ app.listen(PORT, HOST, () => {
 // CRON JOBS - Scheduled Notifications
 // ============================================================================
 
-// Run daily prompt reminders every day at 8:00 PM
-// Users who haven't responded get reminded (with cooldown logic)
-cron.schedule('0 20 * * *', async () => {
+// Run daily prompt reminders every day at 9:00 AM
+// Users who haven't responded to yesterday's prompt get reminded
+cron.schedule('0 9 * * *', async () => {
   console.log('⏰ Running daily prompt reminders...');
   try {
     await sendDailyPromptReminders(pool);
