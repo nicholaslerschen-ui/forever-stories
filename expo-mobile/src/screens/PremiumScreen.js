@@ -73,7 +73,7 @@ export default function PremiumScreen({ navigation }) {
       if (customerInfo.entitlements.active['premium']) {
         Alert.alert(
           'Welcome to Premium!',
-          'You now have access to unlimited stories, AI follow-up questions, and AI Persona Chat.',
+          'You now have access to unlimited stories, follow-up questions, and AI Persona Chat.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       }
@@ -133,7 +133,7 @@ export default function PremiumScreen({ navigation }) {
 
         <View style={styles.featureList}>
           <FeatureItem icon="check" text="Unlimited Stories" getFontSize={getFontSize} active />
-          <FeatureItem icon="check" text="AI Follow-up Questions" getFontSize={getFontSize} active />
+          <FeatureItem icon="check" text="Follow-up Questions" getFontSize={getFontSize} active />
           <FeatureItem icon="check" text="AI Persona Chat" getFontSize={getFontSize} active />
         </View>
 
@@ -195,8 +195,8 @@ export default function PremiumScreen({ navigation }) {
         />
         <FeatureItem
           icon="followup"
-          text="AI Follow-up Questions"
-          description="AI helps draw out richer details after each story"
+          text="Follow-up Questions"
+          description="Additional questions help capture richer details after each story"
           getFontSize={getFontSize}
         />
         <FeatureItem

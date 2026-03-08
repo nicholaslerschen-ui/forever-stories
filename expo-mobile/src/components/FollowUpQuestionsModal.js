@@ -123,7 +123,7 @@ export default function FollowUpQuestionsModal({
             >
               <View style={styles.header}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>AI Follow-up</Text>
+                  <Text style={styles.badgeText}>Follow-up</Text>
                 </View>
                 <Text style={[styles.counter, { fontSize: getFontSize(13) }]}>
                   {currentIndex + 1} of {questions.length}
