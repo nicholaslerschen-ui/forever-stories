@@ -79,7 +79,7 @@ class ApiService {
     return response.json();
   }
 
-  async submitPromptResponse(token, promptId, responseText, submittedQuestionId = null, fileIds = null) {
+  async submitPromptResponse(token, promptId, responseText, submittedQuestionId = null, fileIds = null, followUpData = null) {
     const response = await fetch(`${API_URL}/api/prompts/respond`, {
       method: 'POST',
       headers: getHeaders(token),
@@ -88,6 +88,7 @@ class ApiService {
         response: responseText,
         submittedQuestionId,
         fileIds,
+        followUpData,
       }),
     });
 
@@ -172,7 +173,7 @@ class ApiService {
     return response.json();
   }
 
-  async submitFreeWrite(token, title, storyText, fileIds = null) {
+  async submitFreeWrite(token, title, storyText, fileIds = null, followUpData = null) {
     const response = await fetch(`${API_URL}/api/prompts/respond`, {
       method: 'POST',
       headers: getHeaders(token),
@@ -182,6 +183,7 @@ class ApiService {
         isFreeWrite: true,
         title: title,
         fileIds,
+        followUpData,
       }),
     });
 
@@ -758,25 +760,6 @@ class ApiService {
     return res.json();
   }
 
-  async submitFollowUpResponse(token, promptId, response, parentResponseId, fileIds = null) {
-    const res = await fetch(`${API_URL}/api/prompts/respond`, {
-      method: 'POST',
-      headers: getHeaders(token),
-      body: JSON.stringify({
-        promptId,
-        response,
-        isFollowUp: true,
-        parentResponseId,
-        fileIds,
-      }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Failed to save follow-up response');
-    }
-    return res.json();
-  }
 }
 
 export default new ApiService();

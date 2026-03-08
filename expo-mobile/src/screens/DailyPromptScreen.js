@@ -44,6 +44,7 @@ export default function DailyPromptScreen({ navigation, route }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [pendingFileIds, setPendingFileIds] = useState(null);
 
   useEffect(() => {
     loadPrompt();
@@ -129,19 +130,23 @@ export default function DailyPromptScreen({ navigation, route }) {
         setUploading(false);
       }
 
-      // Include submittedQuestionId if this is a question from a loved one
-      const result = await ApiService.submitPromptResponse(
-        token,
-        prompt?.id || null,
-        response,
-        prompt?.submittedQuestionId || null,
-        fileIds
-      );
-
-      // Save response ID and show rating component
-      setResponseId(result.id);
-      setShowRating(true);
-      setSelectedMedia([]);  // Clear media after successful submit
+      if (isPremium) {
+        // Premium: show follow-ups BEFORE saving
+        setPendingFileIds(fileIds);
+        setShowFollowUp(true);
+      } else {
+        // Free: save immediately, then show rating
+        const result = await ApiService.submitPromptResponse(
+          token,
+          prompt?.id || null,
+          response,
+          prompt?.submittedQuestionId || null,
+          fileIds
+        );
+        setResponseId(result.id);
+        setShowRating(true);
+        setSelectedMedia([]);
+      }
     } catch (error) {
       if (error.upgradeRequired) {
         Alert.alert(
@@ -187,19 +192,47 @@ export default function DailyPromptScreen({ navigation, route }) {
     }
   };
 
+  const handleFollowUpComplete = async (followUpData) => {
+    setShowFollowUp(false);
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const result = await ApiService.submitPromptResponse(
+        token,
+        prompt?.id || null,
+        response,
+        prompt?.submittedQuestionId || null,
+        pendingFileIds,
+        followUpData && followUpData.length > 0 ? followUpData : null
+      );
+      setResponseId(result.id);
+      setSelectedMedia([]);
+      setPendingFileIds(null);
+      setShowRating(true);
+    } catch (error) {
+      if (error.upgradeRequired) {
+        Alert.alert(
+          'Story Limit Reached',
+          `You've written ${error.storyCount || 20} of ${error.storyLimit || 20} free stories. Upgrade to Premium for unlimited stories!`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => navigation.navigate('Premium') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message);
+      }
+    }
+  };
+
   const handleRating = async (rating) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
       await ApiService.ratePrompt(token, prompt.id, responseId, rating);
 
       setShowRating(false);
-      if (isPremium) {
-        setShowFollowUp(true);
-      } else {
-        Alert.alert('Success!', 'Your story has been saved!', [
-          { text: 'OK', onPress: checkAndShowShareModal }
-        ]);
-      }
+      Alert.alert('Success!', 'Your story has been saved!', [
+        { text: 'OK', onPress: checkAndShowShareModal }
+      ]);
     } catch (error) {
       console.error('Rating error:', error);
       Alert.alert('Error', 'Failed to save rating: ' + error.message);
@@ -208,17 +241,6 @@ export default function DailyPromptScreen({ navigation, route }) {
 
   const handleSkipRating = () => {
     setShowRating(false);
-    if (isPremium) {
-      setShowFollowUp(true);
-    } else {
-      Alert.alert('Success!', 'Your story has been saved!', [
-        { text: 'OK', onPress: checkAndShowShareModal }
-      ]);
-    }
-  };
-
-  const handleFollowUpComplete = () => {
-    setShowFollowUp(false);
     Alert.alert('Success!', 'Your story has been saved!', [
       { text: 'OK', onPress: checkAndShowShareModal }
     ]);
@@ -467,13 +489,11 @@ export default function DailyPromptScreen({ navigation, route }) {
         onSelectPrompt={handlePromptChoice}
       />
 
-      {/* AI Follow-Up Questions (premium only) */}
+      {/* Follow-Up Questions (premium only) */}
       <FollowUpQuestionsModal
         visible={showFollowUp}
         promptQuestion={prompt?.question || prompt?.prompt_text || ''}
         userResponse={response}
-        responseId={responseId}
-        promptId={prompt?.id}
         onComplete={handleFollowUpComplete}
       />
 

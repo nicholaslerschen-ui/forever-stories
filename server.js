@@ -2362,7 +2362,7 @@ app.get('/api/prompts/next', authenticateToken, async (req, res) => {
 // Submit prompt response
 app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
   try {
-    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title, submittedQuestionId, fileIds } = req.body;
+    const { promptId, response, isFollowUp, parentResponseId, isBonus, isFreeWrite, title, submittedQuestionId, fileIds, followUpData } = req.body;
     const userId = req.user.userId;
 
     console.log('=== SAVE RESPONSE ===');
@@ -2395,28 +2395,6 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
       }
     }
 
-    // If this is a follow-up response, append to existing response
-    if (isFollowUp && parentResponseId) {
-      const existingResponse = await pool.query(
-        'SELECT response_text FROM prompt_responses WHERE id = $1 AND user_id = $2',
-        [parentResponseId, userId]
-      );
-
-      if (existingResponse.rows.length > 0) {
-        const updatedResponse = existingResponse.rows[0].response_text + '\n\n' + response;
-
-        await pool.query(
-          'UPDATE prompt_responses SET response_text = $1 WHERE id = $2',
-          [updatedResponse, parentResponseId]
-        );
-
-        return res.json({
-          success: true,
-          message: 'Follow-up response added!'
-        });
-      }
-    }
-
     // Determine response type and get prompt text
     let responseType = 'daily';
     let promptText = '';
@@ -2436,12 +2414,16 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
       responseType = 'bonus';
     }
 
-    // Save initial response
+    // Save initial response (with follow-up data if provided)
+    const followUpJson = followUpData && Array.isArray(followUpData) && followUpData.length > 0
+      ? JSON.stringify(followUpData)
+      : '[]';
+
     const result = await pool.query(
-      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, title, submitted_question_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      `INSERT INTO prompt_responses (user_id, prompt_id, prompt_text, response_text, response_type, title, submitted_question_id, follow_up_questions, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
        RETURNING *`,
-      [userId, promptId, promptText, response, responseType, title || null, submittedQuestionId || null]
+      [userId, promptId, promptText, response, responseType, title || null, submittedQuestionId || null, followUpJson]
     );
 
     const responseId = result.rows[0].id;
@@ -2558,25 +2540,20 @@ app.post('/api/prompts/generate-followups', authenticateToken, requirePremium, a
 
     // Check if Anthropic API key exists
     if (!process.env.ANTHROPIC_API_KEY) {
-      return res.json({
-        followUpQuestions: [
-          "Can you tell me more about that experience?",
-          "What emotions did you feel during that time?",
-          "How did that shape who you are today?"
-        ]
-      });
+      return res.json({ followUpQuestions: [] });
     }
 
     // Create prompt for generating follow-ups
-    const systemPrompt = `You are an empathetic interviewer helping someone document their life story. 
+    const systemPrompt = `You are an empathetic interviewer helping someone document their life story.
 
 Your job is to generate 2-3 thoughtful follow-up questions based on their response to help them share more details and deeper insights.
 
 Rules:
-- Ask specific questions based on what they mentioned
+- Ask specific questions that reference concrete details, people, places, or events they mentioned
+- Never ask generic questions like "Can you tell me more about that?" or "How did that make you feel?" — always tie the question to something specific in their response
 - Be warm and curious, not interrogating
-- Focus on emotions, details, people, or impact
-- Keep questions short and clear
+- Focus on sensory details, specific people involved, turning points, or lasting impact
+- Keep questions short and conversational
 - Generate ONLY the questions, no other text
 
 Format your response as a JSON array of strings. Example:
@@ -2591,7 +2568,7 @@ Format your response as a JSON array of strings. Example:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
         system: systemPrompt,
         messages: [
@@ -2610,14 +2587,7 @@ Generate 2-3 follow-up questions to help them share more about this story.`
     if (!apiResponse.ok) {
       const error = await apiResponse.text();
       console.error('Anthropic API error:', error);
-      // Fallback questions
-      return res.json({
-        followUpQuestions: [
-          "Can you tell me more about that experience?",
-          "What stands out most in your memory about that time?",
-          "How did that experience influence you?"
-        ]
-      });
+      return res.json({ followUpQuestions: [] });
     }
 
     const data = await apiResponse.json();
@@ -2641,23 +2611,13 @@ Generate 2-3 follow-up questions to help them share more about this story.`
         .slice(0, 3);
 
       res.json({
-        followUpQuestions: questions.length > 0 ? questions : [
-          "Can you tell me more about that?",
-          "What emotions did you feel?",
-          "How did that experience shape you?"
-        ]
+        followUpQuestions: questions
       });
     }
 
   } catch (error) {
     console.error('Generate follow-ups error:', error);
-    res.json({
-      followUpQuestions: [
-        "Can you tell me more about that experience?",
-        "What stands out most in your memory?",
-        "How did that influence who you are today?"
-      ]
-    });
+    res.json({ followUpQuestions: [] });
   }
 });
 

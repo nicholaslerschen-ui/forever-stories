@@ -221,6 +221,34 @@ export default function StoryDetailScreen({ route, navigation }) {
         )}
       </View>
 
+      {/* Follow-up Q&A */}
+      {!isEditing && story.follow_up_questions && (() => {
+        let followUps = [];
+        try {
+          followUps = typeof story.follow_up_questions === 'string'
+            ? JSON.parse(story.follow_up_questions)
+            : story.follow_up_questions;
+        } catch (e) {}
+        if (!Array.isArray(followUps) || followUps.length === 0) return null;
+        return (
+          <View style={styles.followUpSection}>
+            <Text style={[styles.followUpLabel, { fontSize: getFontSize(12) }]}>Follow-up Details</Text>
+            {followUps.map((item, index) => (
+              <View key={index} style={styles.followUpItem}>
+                <View style={styles.followUpQuestionCard}>
+                  <Text style={[styles.followUpQuestion, { fontSize: getFontSize(15) }]}>
+                    {item.question}
+                  </Text>
+                </View>
+                <Text style={[styles.followUpAnswer, { fontSize: getFontSize(16) }]}>
+                  {item.answer}
+                </Text>
+              </View>
+            ))}
+          </View>
+        );
+      })()}
+
       {/* Media Gallery - Edit Mode */}
       {isEditing && (
         <View style={styles.mediaSection}>
@@ -509,6 +537,39 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
+  },
+  followUpSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  followUpLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#e11d48',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  followUpItem: {
+    marginBottom: 16,
+  },
+  followUpQuestionCard: {
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#e11d48',
+    marginBottom: 8,
+  },
+  followUpQuestion: {
+    color: '#333',
+    fontWeight: '500',
+    fontStyle: 'italic',
+    lineHeight: 22,
+  },
+  followUpAnswer: {
+    color: '#111',
+    lineHeight: 24,
+    paddingLeft: 4,
   },
   mediaSection: {
     paddingHorizontal: 20,

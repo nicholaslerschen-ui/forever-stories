@@ -27,8 +27,8 @@ export default function FreeWriteScreen({ navigation }) {
   const [uploading, setUploading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
-  const [responseId, setResponseId] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [pendingFileIds, setPendingFileIds] = useState(null);
 
   useEffect(() => {
     const checkPremium = async () => {
@@ -94,12 +94,13 @@ export default function FreeWriteScreen({ navigation }) {
         setUploading(false);
       }
 
-      const result = await ApiService.submitFreeWrite(token, title || 'Untitled Story', story, fileIds);
-
-      if (isPremium && result?.responseId) {
-        setResponseId(result.responseId);
+      if (isPremium) {
+        // Premium: show follow-ups BEFORE saving
+        setPendingFileIds(fileIds);
         setShowFollowUp(true);
       } else {
+        // Free: save immediately
+        await ApiService.submitFreeWrite(token, title || 'Untitled Story', story, fileIds);
         Alert.alert('Success!', 'Your story has been saved!', [
           { text: 'OK', onPress: checkAndShowShareModal }
         ]);
@@ -120,6 +121,38 @@ export default function FreeWriteScreen({ navigation }) {
     } finally {
       setSubmitting(false);
       setUploading(false);
+    }
+  };
+
+  const handleFollowUpComplete = async (followUpData) => {
+    setShowFollowUp(false);
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      await ApiService.submitFreeWrite(
+        token,
+        title || 'Untitled Story',
+        story,
+        pendingFileIds,
+        followUpData && followUpData.length > 0 ? followUpData : null
+      );
+      setSelectedMedia([]);
+      setPendingFileIds(null);
+      Alert.alert('Success!', 'Your story has been saved!', [
+        { text: 'OK', onPress: checkAndShowShareModal }
+      ]);
+    } catch (error) {
+      if (error.upgradeRequired) {
+        Alert.alert(
+          'Story Limit Reached',
+          `You've written ${error.storyCount || 20} of ${error.storyLimit || 20} free stories. Upgrade to Premium for unlimited stories!`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => navigation.navigate('Premium') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message);
+      }
     }
   };
 
@@ -189,19 +222,12 @@ export default function FreeWriteScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
-      {/* AI Follow-Up Questions (premium only) */}
+      {/* Follow-Up Questions (premium only) */}
       <FollowUpQuestionsModal
         visible={showFollowUp}
         promptQuestion={title || 'Free Write'}
         userResponse={story}
-        responseId={responseId}
-        promptId={null}
-        onComplete={() => {
-          setShowFollowUp(false);
-          Alert.alert('Success!', 'Your story has been saved!', [
-            { text: 'OK', onPress: checkAndShowShareModal }
-          ]);
-        }}
+        onComplete={handleFollowUpComplete}
       />
 
       {/* Share App Modal (after 5th story) */}

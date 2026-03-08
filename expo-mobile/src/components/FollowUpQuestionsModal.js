@@ -19,8 +19,6 @@ export default function FollowUpQuestionsModal({
   visible,
   promptQuestion,
   userResponse,
-  responseId,
-  promptId,
   onComplete,
 }) {
   const { getFontSize } = useFontSize();
@@ -28,11 +26,13 @@ export default function FollowUpQuestionsModal({
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [answeredCount, setAnsweredCount] = useState(0);
+  const [collectedAnswers, setCollectedAnswers] = useState([]);
 
   useEffect(() => {
     if (visible) {
+      setCollectedAnswers([]);
+      setCurrentIndex(0);
+      setAnswer('');
       generateQuestions();
     }
   }, [visible]);
@@ -46,44 +46,33 @@ export default function FollowUpQuestionsModal({
         promptQuestion,
         userResponse
       );
-      if (result && result.followUpQuestions) {
+      if (result && result.followUpQuestions && result.followUpQuestions.length > 0) {
         setQuestions(result.followUpQuestions);
       } else {
-        onComplete();
+        onComplete([]);
       }
     } catch (error) {
       console.error('Failed to generate follow-ups:', error);
-      onComplete();
+      onComplete([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmitAnswer = async () => {
+  const handleSubmitAnswer = () => {
     if (!answer.trim()) return;
 
-    setSubmitting(true);
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      await ApiService.submitFollowUpResponse(
-        token,
-        promptId,
-        answer.trim(),
-        responseId
-      );
-      setAnsweredCount(prev => prev + 1);
-      setAnswer('');
+    const newAnswers = [...collectedAnswers, {
+      question: questions[currentIndex],
+      answer: answer.trim(),
+    }];
+    setCollectedAnswers(newAnswers);
+    setAnswer('');
 
-      if (currentIndex < questions.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-      } else {
-        onComplete();
-      }
-    } catch (error) {
-      console.error('Failed to submit follow-up:', error);
-      onComplete();
-    } finally {
-      setSubmitting(false);
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      onComplete(newAnswers);
     }
   };
 
@@ -92,12 +81,12 @@ export default function FollowUpQuestionsModal({
       setCurrentIndex(prev => prev + 1);
       setAnswer('');
     } else {
-      onComplete();
+      onComplete(collectedAnswers);
     }
   };
 
   const handleSkipAll = () => {
-    onComplete();
+    onComplete(collectedAnswers);
   };
 
   if (!visible) return null;
@@ -158,17 +147,13 @@ export default function FollowUpQuestionsModal({
               />
 
               <TouchableOpacity
-                style={[styles.submitButton, (!answer.trim() || submitting) && styles.submitButtonDisabled]}
+                style={[styles.submitButton, !answer.trim() && styles.submitButtonDisabled]}
                 onPress={handleSubmitAnswer}
-                disabled={!answer.trim() || submitting}
+                disabled={!answer.trim()}
               >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[styles.submitButtonText, { fontSize: getFontSize(16) }]}>
-                    Save & Continue
-                  </Text>
-                )}
+                <Text style={[styles.submitButtonText, { fontSize: getFontSize(16) }]}>
+                  Save & Continue
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.skipButton} onPress={handleSkipQuestion}>
