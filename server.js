@@ -318,6 +318,36 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Helper: Check if user has premium access
+async function checkPremiumAccess(userId) {
+  const result = await pool.query(
+    'SELECT subscription_tier, subscription_status, subscription_ends_at FROM users WHERE id = $1',
+    [userId]
+  );
+  const user = result.rows[0];
+  if (!user) return false;
+  if (user.subscription_tier !== 'premium') return false;
+  if (user.subscription_status === 'expired') return false;
+  return ['active', 'canceled'].includes(user.subscription_status);
+}
+
+// Middleware: Require premium subscription
+const requirePremium = async (req, res, next) => {
+  try {
+    const isPremium = await checkPremiumAccess(req.user.userId);
+    if (!isPremium) {
+      return res.status(403).json({
+        error: 'Premium subscription required',
+        upgrade_required: true
+      });
+    }
+    next();
+  } catch (error) {
+    console.error('Premium check error:', error);
+    res.status(500).json({ error: 'Failed to verify subscription' });
+  }
+};
+
 // ============================================================================
 // HEALTH CHECK
 // ============================================================================
@@ -3976,37 +4006,6 @@ app.post('/api/notifications/send-weekly-viewer-reminders', async (req, res) => 
 // ============================================================================
 // SUBSCRIPTIONS & PREMIUM
 // ============================================================================
-
-// Helper: Check if user has premium access
-async function checkPremiumAccess(userId) {
-  const result = await pool.query(
-    'SELECT subscription_tier, subscription_status, subscription_ends_at FROM users WHERE id = $1',
-    [userId]
-  );
-  const user = result.rows[0];
-  if (!user) return false;
-  if (user.subscription_tier !== 'premium') return false;
-  if (user.subscription_status === 'expired') return false;
-  // Allow access if active or canceled (still within paid period)
-  return ['active', 'canceled'].includes(user.subscription_status);
-}
-
-// Middleware: Require premium subscription
-const requirePremium = async (req, res, next) => {
-  try {
-    const isPremium = await checkPremiumAccess(req.user.userId);
-    if (!isPremium) {
-      return res.status(403).json({
-        error: 'Premium subscription required',
-        upgrade_required: true
-      });
-    }
-    next();
-  } catch (error) {
-    console.error('Premium check error:', error);
-    res.status(500).json({ error: 'Failed to verify subscription' });
-  }
-};
 
 // Get subscription status
 app.get('/api/subscriptions/status', authenticateToken, async (req, res) => {
