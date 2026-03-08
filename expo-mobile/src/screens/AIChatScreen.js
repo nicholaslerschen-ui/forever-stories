@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
@@ -23,7 +24,23 @@ export default function AIChatScreen({ navigation }) {
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPremium, setIsPremium] = useState(null); // null = loading, true/false = known
   const flatListRef = useRef(null);
+
+  useEffect(() => {
+    checkPremiumStatus();
+  }, []);
+
+  const checkPremiumStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const subStatus = await ApiService.getSubscriptionStatus(token);
+      setIsPremium(subStatus.isPremium);
+    } catch (error) {
+      console.error('Failed to check premium status:', error);
+      setIsPremium(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!inputText.trim() || loading) return;
@@ -40,7 +57,7 @@ export default function AIChatScreen({ navigation }) {
 
     try {
       const token = await AsyncStorage.getItem('authToken');
-      
+
       // Get chat history for context
       const history = messages.map(msg => ({
         role: msg.role,
@@ -57,6 +74,10 @@ export default function AIChatScreen({ navigation }) {
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
+      if (error.upgradeRequired) {
+        setIsPremium(false);
+        return;
+      }
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -95,6 +116,50 @@ export default function AIChatScreen({ navigation }) {
     }
   }, [messages]);
 
+  // Loading state
+  if (isPremium === null) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#e11d48" />
+      </View>
+    );
+  }
+
+  // Not premium - show paywall
+  if (!isPremium) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>AI Persona</Text>
+          <View style={{ width: 50 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.paywallContainer}>
+          <View style={styles.paywallIcon}>
+            <Text style={styles.paywallIconText}>✦</Text>
+          </View>
+          <Text style={styles.paywallTitle}>Premium Feature</Text>
+          <Text style={styles.paywallDescription}>
+            AI Persona lets you chat with an AI trained on your life stories. It speaks in your voice and can recall your memories.
+          </Text>
+          <Text style={styles.paywallDescription}>
+            Upgrade to Premium to unlock this feature and unlimited stories.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('Premium')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Premium - show full chat
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -152,6 +217,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -232,5 +301,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  // Paywall styles
+  paywallContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingBottom: 60,
+  },
+  paywallIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fef2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  paywallIconText: {
+    fontSize: 36,
+    color: '#e11d48',
+  },
+  paywallTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111',
+    marginBottom: 16,
+  },
+  paywallDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  upgradeButton: {
+    backgroundColor: '#e11d48',
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 14,
+    marginTop: 16,
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

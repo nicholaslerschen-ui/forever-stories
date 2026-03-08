@@ -91,7 +91,17 @@ class ApiService {
       }),
     });
 
-    if (!response.ok) throw new Error('Failed to submit response');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData.upgrade_required) {
+        const error = new Error(errorData.message || 'Story limit reached');
+        error.upgradeRequired = true;
+        error.storyCount = errorData.storyCount;
+        error.storyLimit = errorData.storyLimit;
+        throw error;
+      }
+      throw new Error('Failed to submit response');
+    }
     return response.json();
   }
 
@@ -149,8 +159,16 @@ class ApiService {
         history,
       }),
     });
-    
-    if (!response.ok) throw new Error('Failed to send message');
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData.upgrade_required) {
+        const error = new Error('Premium subscription required');
+        error.upgradeRequired = true;
+        throw error;
+      }
+      throw new Error('Failed to send message');
+    }
     return response.json();
   }
 
@@ -167,7 +185,17 @@ class ApiService {
       }),
     });
 
-    if (!response.ok) throw new Error('Failed to submit story');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData.upgrade_required) {
+        const error = new Error(errorData.message || 'Story limit reached');
+        error.upgradeRequired = true;
+        error.storyCount = errorData.storyCount;
+        error.storyLimit = errorData.storyLimit;
+        throw error;
+      }
+      throw new Error('Failed to submit story');
+    }
     return response.json();
   }
 
@@ -700,6 +728,17 @@ class ApiService {
       throw new Error('Failed to get notification preferences');
     }
 
+    return response.json();
+  }
+
+  // ===== SUBSCRIPTIONS =====
+
+  async getSubscriptionStatus(token) {
+    const response = await fetch(`${API_URL}/api/subscriptions/status`, {
+      headers: getHeaders(token, false),
+    });
+
+    if (!response.ok) throw new Error('Failed to get subscription status');
     return response.json();
   }
 }

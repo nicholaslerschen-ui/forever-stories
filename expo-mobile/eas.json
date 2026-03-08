@@ -19,7 +19,8 @@
     "production": {
       "ios": {
         "appleId": "nicklerschen@yahoo.com",
-        "appleTeamId": "6RCV78FX73"
+        "appleTeamId": "6RCV78FX73",
+        "ascAppId": "6759589304"
       }
     }
   }

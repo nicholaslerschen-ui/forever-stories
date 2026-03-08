@@ -240,7 +240,7 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(null, true); // Allow all for now since mobile app doesn't send origin
+    callback(null, false); // Reject unknown origins (mobile apps have no origin header, handled above)
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -278,12 +278,25 @@ const pool = new Pool({
 
 console.log('📊 Using PostgreSQL database');
 
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
+// Test database connection and run pending migrations
+pool.query('SELECT NOW()', async (err, res) => {
   if (err) {
     console.error('❌ Database connection error:', err);
   } else {
     console.log('✅ Database connected successfully');
+
+    // Run subscription migration (idempotent - safe to re-run)
+    try {
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(20) DEFAULT 'free'");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(20) DEFAULT 'active'");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS rc_customer_id VARCHAR(100)");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMP WITH TIME ZONE");
+      await pool.query("CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON users(subscription_tier)");
+      await pool.query("CREATE INDEX IF NOT EXISTS idx_users_rc_customer ON users(rc_customer_id)");
+      console.log('✅ Subscription columns ready');
+    } catch (migrationErr) {
+      console.error('⚠️ Subscription migration warning:', migrationErr.message);
+    }
   }
 });
 
@@ -660,6 +673,7 @@ app.get('/api/user/account', authenticateToken, async (req, res) => {
     // Get user data and profile data with JOIN
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.created_at,
+              u.subscription_tier, u.subscription_status, u.subscription_ends_at,
               p.birth_date, p.birth_location, p.life_events, p.interests,
               p.timezone, p.additional_info
        FROM users u
@@ -1951,11 +1965,12 @@ app.post('/api/files/upload', authenticateToken, (req, res, next) => {
       }
 
       // Handle custom file filter errors
-      if (err.message.includes('Invalid file type')) {
-        return res.status(400).json({ error: err.message });
+      if (err.message && err.message.includes('Invalid file type')) {
+        return res.status(400).json({ error: 'Invalid file type. Only JPG, PNG, HEIC, MP4, MOV allowed.' });
       }
 
-      return res.status(500).json({ error: err.message || 'File upload failed' });
+      console.error('File upload error:', err);
+      return res.status(500).json({ error: 'File upload failed' });
     }
 
     // No error, continue to the actual handler
@@ -2258,7 +2273,8 @@ app.get('/api/prompts/debug', authenticateToken, async (req, res) => {
       user_timezone: userTz.rows[0]?.timezone || 'not set',
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Stats error:', error);
+    res.status(500).json({ error: 'Failed to load stats' });
   }
 });
 
@@ -2328,6 +2344,25 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 
     if (!response || response.trim().length === 0) {
       return res.status(400).json({ error: 'Response cannot be empty' });
+    }
+
+    // Check story limit for free tier users
+    const isPremium = await checkPremiumAccess(userId);
+    if (!isPremium) {
+      const storyCount = await pool.query(
+        'SELECT COUNT(*) as total FROM prompt_responses WHERE user_id = $1',
+        [userId]
+      );
+      const total = parseInt(storyCount.rows[0].total);
+      if (total >= 20) {
+        return res.status(403).json({
+          error: 'Story limit reached',
+          message: 'Upgrade to Premium for unlimited stories',
+          storyCount: total,
+          storyLimit: 20,
+          upgrade_required: true
+        });
+      }
     }
 
     // If this is a follow-up response, append to existing response
@@ -3398,10 +3433,21 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     const total = parseInt(totalResult.rows[0]?.total || 0);
     const streak = parseInt(streakResult.rows[0]?.streak || 0);
 
+    // Get subscription info
+    const subResult = await pool.query(
+      'SELECT subscription_tier, subscription_status, subscription_ends_at FROM users WHERE id = $1',
+      [userId]
+    );
+    const sub = subResult.rows[0] || {};
+
     res.json({
       stats: {
         totalResponses: total,
-        currentStreak: streak
+        currentStreak: streak,
+        subscriptionTier: sub.subscription_tier || 'free',
+        subscriptionStatus: sub.subscription_status || 'active',
+        subscriptionEndsAt: sub.subscription_ends_at || null,
+        storyLimit: sub.subscription_tier === 'premium' ? null : 20
       }
     });
   } catch (error) {
@@ -3415,7 +3461,8 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
 // ============================================================================
 
 // Chat with AI persona (speaks AS the user, not TO the user)
-app.post('/api/ai/persona', authenticateToken, async (req, res) => {
+// Premium feature - requires active subscription
+app.post('/api/ai/persona', authenticateToken, requirePremium, async (req, res) => {
   try {
     const { message, history } = req.body;
     const userId = req.user.userId;
@@ -3861,7 +3908,7 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
     return res.json({ success: true, sent: result.sent, failed: result.failed, tokens: deviceTokens });
   } catch (error) {
     console.error('Test notification error:', error.stack || error);
-    return res.json({ error: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Failed to send test notification' });
   }
 });
 
@@ -3875,7 +3922,8 @@ app.get('/api/notifications/tokens', authenticateToken, async (req, res) => {
     );
     res.json({ count: tokensResult.rows.length, tokens: tokensResult.rows });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Token query error:', error);
+    res.status(500).json({ error: 'Failed to retrieve tokens' });
   }
 });
 
@@ -3922,6 +3970,182 @@ app.post('/api/notifications/send-weekly-viewer-reminders', async (req, res) => 
   } catch (error) {
     console.error('Weekly viewer reminder error:', error);
     res.status(500).json({ error: 'Failed to send weekly viewer reminders' });
+  }
+});
+
+// ============================================================================
+// SUBSCRIPTIONS & PREMIUM
+// ============================================================================
+
+// Helper: Check if user has premium access
+async function checkPremiumAccess(userId) {
+  const result = await pool.query(
+    'SELECT subscription_tier, subscription_status, subscription_ends_at FROM users WHERE id = $1',
+    [userId]
+  );
+  const user = result.rows[0];
+  if (!user) return false;
+  if (user.subscription_tier !== 'premium') return false;
+  if (user.subscription_status === 'expired') return false;
+  // Allow access if active or canceled (still within paid period)
+  return ['active', 'canceled'].includes(user.subscription_status);
+}
+
+// Middleware: Require premium subscription
+const requirePremium = async (req, res, next) => {
+  try {
+    const isPremium = await checkPremiumAccess(req.user.userId);
+    if (!isPremium) {
+      return res.status(403).json({
+        error: 'Premium subscription required',
+        upgrade_required: true
+      });
+    }
+    next();
+  } catch (error) {
+    console.error('Premium check error:', error);
+    res.status(500).json({ error: 'Failed to verify subscription' });
+  }
+};
+
+// Get subscription status
+app.get('/api/subscriptions/status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const result = await pool.query(
+      `SELECT subscription_tier, subscription_status, subscription_ends_at, rc_customer_id
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Get story count for limit display
+    const storyCount = await pool.query(
+      'SELECT COUNT(*) as total FROM prompt_responses WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({
+      tier: user.subscription_tier || 'free',
+      status: user.subscription_status || 'active',
+      endsAt: user.subscription_ends_at,
+      rcCustomerId: user.rc_customer_id,
+      storyCount: parseInt(storyCount.rows[0].total),
+      storyLimit: user.subscription_tier === 'premium' ? null : 20,
+      isPremium: user.subscription_tier === 'premium' && ['active', 'canceled'].includes(user.subscription_status)
+    });
+  } catch (error) {
+    console.error('Subscription status error:', error);
+    res.status(500).json({ error: 'Failed to get subscription status' });
+  }
+});
+
+// RevenueCat webhook handler
+// RevenueCat sends events when subscriptions change
+app.post('/api/webhooks/revenuecat', express.json(), async (req, res) => {
+  try {
+    // Verify webhook authorization
+    const authHeader = req.headers['authorization'];
+    const expectedSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+
+    if (expectedSecret && authHeader !== expectedSecret) {
+      console.warn('RevenueCat webhook: unauthorized request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const event = req.body.event;
+    if (!event) {
+      return res.status(400).json({ error: 'No event data' });
+    }
+
+    const { type, app_user_id, expiration_at_ms, product_id } = event;
+    console.log(`RevenueCat webhook: ${type} for user ${app_user_id}`);
+
+    // app_user_id should be our user's ID (set when we configure RevenueCat)
+    const userId = app_user_id;
+
+    switch (type) {
+      case 'INITIAL_PURCHASE':
+      case 'RENEWAL':
+      case 'PRODUCT_CHANGE':
+        await pool.query(
+          `UPDATE users SET
+            subscription_tier = 'premium',
+            subscription_status = 'active',
+            subscription_ends_at = $1
+           WHERE id = $2`,
+          [expiration_at_ms ? new Date(expiration_at_ms) : null, userId]
+        );
+        console.log(`User ${userId} upgraded to premium`);
+        break;
+
+      case 'CANCELLATION':
+        // User canceled but still has access until period ends
+        await pool.query(
+          `UPDATE users SET
+            subscription_status = 'canceled'
+           WHERE id = $1`,
+          [userId]
+        );
+        console.log(`User ${userId} canceled (active until period end)`);
+        break;
+
+      case 'EXPIRATION':
+      case 'BILLING_ISSUE':
+        await pool.query(
+          `UPDATE users SET
+            subscription_tier = 'free',
+            subscription_status = $1
+           WHERE id = $2`,
+          [type === 'EXPIRATION' ? 'expired' : 'billing_issue', userId]
+        );
+        console.log(`User ${userId} subscription ${type.toLowerCase()}`);
+        break;
+
+      case 'SUBSCRIBER_ALIAS':
+        // RevenueCat customer ID alias
+        const rcId = event.aliases?.[0];
+        if (rcId) {
+          await pool.query(
+            'UPDATE users SET rc_customer_id = $1 WHERE id = $2',
+            [rcId, userId]
+          );
+        }
+        break;
+
+      default:
+        console.log(`RevenueCat webhook: unhandled event type ${type}`);
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('RevenueCat webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Admin: Manually set user subscription (for testing)
+app.post('/api/subscriptions/set', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { tier, status } = req.body;
+
+    // Only allow in development or for specific admin users
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Not allowed in production' });
+    }
+
+    await pool.query(
+      `UPDATE users SET subscription_tier = $1, subscription_status = $2 WHERE id = $3`,
+      [tier || 'free', status || 'active', userId]
+    );
+
+    res.json({ success: true, tier, status });
+  } catch (error) {
+    console.error('Set subscription error:', error);
+    res.status(500).json({ error: 'Failed to set subscription' });
   }
 });
 

@@ -243,6 +243,37 @@ export default function AccountScreen({ navigation }) {
         </View>
       )}
 
+      {/* Subscription Section */}
+      {user?.role !== 'viewer' && (
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Subscription</Text>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('Premium')}
+          >
+            {account?.subscription_tier === 'premium' ? (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: '#e11d48', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginRight: 8 }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, textTransform: 'uppercase' }}>Premium</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Active</Text>
+                </View>
+                <Text style={[styles.cardLink, { fontSize: getFontSize(14), marginTop: 8 }]}>Manage subscription →</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Free Plan</Text>
+                <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
+                  Upgrade to Premium for unlimited stories and AI Persona
+                </Text>
+                <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Upgrade →</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Settings Section */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Settings</Text>

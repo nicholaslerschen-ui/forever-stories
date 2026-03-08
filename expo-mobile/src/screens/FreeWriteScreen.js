@@ -83,7 +83,18 @@ export default function FreeWriteScreen({ navigation }) {
         { text: 'OK', onPress: checkAndShowShareModal }
       ]);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      if (error.upgradeRequired) {
+        Alert.alert(
+          'Story Limit Reached',
+          `You've written ${error.storyCount || 20} of ${error.storyLimit || 20} free stories. Upgrade to Premium for unlimited stories!`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Upgrade', onPress: () => navigation.navigate('Premium') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setSubmitting(false);
       setUploading(false);

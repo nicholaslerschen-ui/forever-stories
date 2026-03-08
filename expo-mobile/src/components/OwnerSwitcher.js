@@ -60,8 +60,8 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>Switch Owner</Text>
-          <Text style={styles.subtitle}>View stories and questions from:</Text>
+          <Text style={styles.title}>Select Owner</Text>
+          <Text style={styles.subtitle}>View stories and submit questions to:</Text>
 
           <FlatList
             data={owners}
