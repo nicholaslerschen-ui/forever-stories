@@ -2548,7 +2548,7 @@ app.post('/api/prompts/respond', authenticateToken, async (req, res) => {
 });
 
 // Generate AI follow-up questions
-app.post('/api/prompts/generate-followups', authenticateToken, async (req, res) => {
+app.post('/api/prompts/generate-followups', authenticateToken, requirePremium, async (req, res) => {
   try {
     const { question, response } = req.body;
 

@@ -741,6 +741,42 @@ class ApiService {
     if (!response.ok) throw new Error('Failed to get subscription status');
     return response.json();
   }
+
+  // ===== AI FOLLOW-UP QUESTIONS =====
+
+  async generateFollowUpQuestions(token, question, response) {
+    const res = await fetch(`${API_URL}/api/prompts/generate-followups`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ question, response }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 403) return null; // Not premium
+      throw new Error('Failed to generate follow-up questions');
+    }
+    return res.json();
+  }
+
+  async submitFollowUpResponse(token, promptId, response, parentResponseId, fileIds = null) {
+    const res = await fetch(`${API_URL}/api/prompts/respond`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({
+        promptId,
+        response,
+        isFollowUp: true,
+        parentResponseId,
+        fileIds,
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to save follow-up response');
+    }
+    return res.json();
+  }
 }
 
 export default new ApiService();

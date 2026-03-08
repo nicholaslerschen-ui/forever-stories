@@ -19,6 +19,7 @@ import RescueModeChoiceModal from '../components/RescueModeChoiceModal';
 import PromptChoiceList from '../components/PromptChoiceList';
 import MediaPicker from '../components/MediaPicker';
 import ShareAppModal from '../components/ShareAppModal';
+import FollowUpQuestionsModal from '../components/FollowUpQuestionsModal';
 import { useFontSize } from '../context/FontSizeContext';
 
 export default function DailyPromptScreen({ navigation, route }) {
@@ -41,10 +42,23 @@ export default function DailyPromptScreen({ navigation, route }) {
   const [rescueOptions, setRescueOptions] = useState([]);
   const [promptChoices, setPromptChoices] = useState([]);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     loadPrompt();
+    checkPremium();
   }, []);
+
+  const checkPremium = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const subStatus = await ApiService.getSubscriptionStatus(token);
+      setIsPremium(subStatus.isPremium);
+    } catch (error) {
+      setIsPremium(false);
+    }
+  };
 
   const loadPrompt = async () => {
     try {
@@ -179,9 +193,13 @@ export default function DailyPromptScreen({ navigation, route }) {
       await ApiService.ratePrompt(token, prompt.id, responseId, rating);
 
       setShowRating(false);
-      Alert.alert('Success!', 'Your story has been saved!', [
-        { text: 'OK', onPress: checkAndShowShareModal }
-      ]);
+      if (isPremium) {
+        setShowFollowUp(true);
+      } else {
+        Alert.alert('Success!', 'Your story has been saved!', [
+          { text: 'OK', onPress: checkAndShowShareModal }
+        ]);
+      }
     } catch (error) {
       console.error('Rating error:', error);
       Alert.alert('Error', 'Failed to save rating: ' + error.message);
@@ -190,6 +208,17 @@ export default function DailyPromptScreen({ navigation, route }) {
 
   const handleSkipRating = () => {
     setShowRating(false);
+    if (isPremium) {
+      setShowFollowUp(true);
+    } else {
+      Alert.alert('Success!', 'Your story has been saved!', [
+        { text: 'OK', onPress: checkAndShowShareModal }
+      ]);
+    }
+  };
+
+  const handleFollowUpComplete = () => {
+    setShowFollowUp(false);
     Alert.alert('Success!', 'Your story has been saved!', [
       { text: 'OK', onPress: checkAndShowShareModal }
     ]);
@@ -436,6 +465,16 @@ export default function DailyPromptScreen({ navigation, route }) {
         visible={showPromptList}
         prompts={promptChoices}
         onSelectPrompt={handlePromptChoice}
+      />
+
+      {/* AI Follow-Up Questions (premium only) */}
+      <FollowUpQuestionsModal
+        visible={showFollowUp}
+        promptQuestion={prompt?.question || prompt?.prompt_text || ''}
+        userResponse={response}
+        responseId={responseId}
+        promptId={prompt?.id}
+        onComplete={handleFollowUpComplete}
       />
 
       {/* Share App Modal (after 5th story) */}

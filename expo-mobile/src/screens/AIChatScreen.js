@@ -143,10 +143,10 @@ export default function AIChatScreen({ navigation }) {
           </View>
           <Text style={styles.paywallTitle}>Premium Feature</Text>
           <Text style={styles.paywallDescription}>
-            AI Persona lets you chat with an AI trained on your life stories. It speaks in your voice and can recall your memories.
+            AI Persona lets loved ones chat with an AI version of you, powered by your life stories. It speaks in your voice and recalls your memories.
           </Text>
           <Text style={styles.paywallDescription}>
-            Upgrade to Premium to unlock this feature and unlimited stories.
+            Upgrade to Premium to unlock this feature, AI follow-up questions, and unlimited stories.
           </Text>
           <TouchableOpacity
             style={styles.upgradeButton}

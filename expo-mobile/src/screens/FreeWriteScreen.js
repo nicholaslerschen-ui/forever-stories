@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 import MediaPicker from '../components/MediaPicker';
 import ShareAppModal from '../components/ShareAppModal';
+import FollowUpQuestionsModal from '../components/FollowUpQuestionsModal';
 import { useFontSize } from '../context/FontSizeContext';
 
 export default function FreeWriteScreen({ navigation }) {
@@ -25,6 +26,22 @@ export default function FreeWriteScreen({ navigation }) {
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [responseId, setResponseId] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    const checkPremium = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        const subStatus = await ApiService.getSubscriptionStatus(token);
+        setIsPremium(subStatus.isPremium);
+      } catch (error) {
+        setIsPremium(false);
+      }
+    };
+    checkPremium();
+  }, []);
 
   const checkAndShowShareModal = async () => {
     try {
@@ -77,11 +94,16 @@ export default function FreeWriteScreen({ navigation }) {
         setUploading(false);
       }
 
-      await ApiService.submitFreeWrite(token, title || 'Untitled Story', story, fileIds);
+      const result = await ApiService.submitFreeWrite(token, title || 'Untitled Story', story, fileIds);
 
-      Alert.alert('Success!', 'Your story has been saved!', [
-        { text: 'OK', onPress: checkAndShowShareModal }
-      ]);
+      if (isPremium && result?.responseId) {
+        setResponseId(result.responseId);
+        setShowFollowUp(true);
+      } else {
+        Alert.alert('Success!', 'Your story has been saved!', [
+          { text: 'OK', onPress: checkAndShowShareModal }
+        ]);
+      }
     } catch (error) {
       if (error.upgradeRequired) {
         Alert.alert(
@@ -166,6 +188,21 @@ export default function FreeWriteScreen({ navigation }) {
           </Text>
         )}
       </TouchableOpacity>
+
+      {/* AI Follow-Up Questions (premium only) */}
+      <FollowUpQuestionsModal
+        visible={showFollowUp}
+        promptQuestion={title || 'Free Write'}
+        userResponse={story}
+        responseId={responseId}
+        promptId={null}
+        onComplete={() => {
+          setShowFollowUp(false);
+          Alert.alert('Success!', 'Your story has been saved!', [
+            { text: 'OK', onPress: checkAndShowShareModal }
+          ]);
+        }}
+      />
 
       {/* Share App Modal (after 5th story) */}
       <ShareAppModal

@@ -73,7 +73,7 @@ export default function PremiumScreen({ navigation }) {
       if (customerInfo.entitlements.active['premium']) {
         Alert.alert(
           'Welcome to Premium!',
-          'You now have access to unlimited stories, AI Persona, and more.',
+          'You now have access to unlimited stories, AI follow-up questions, and AI Persona Chat.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       }
@@ -133,8 +133,8 @@ export default function PremiumScreen({ navigation }) {
 
         <View style={styles.featureList}>
           <FeatureItem icon="check" text="Unlimited Stories" getFontSize={getFontSize} active />
+          <FeatureItem icon="check" text="AI Follow-up Questions" getFontSize={getFontSize} active />
           <FeatureItem icon="check" text="AI Persona Chat" getFontSize={getFontSize} active />
-          <FeatureItem icon="check" text="Priority Support" getFontSize={getFontSize} active />
         </View>
 
         {currentSubscription.status === 'canceled' && (
@@ -172,7 +172,7 @@ export default function PremiumScreen({ navigation }) {
 
       <Text style={[styles.title, { fontSize: getFontSize(28) }]}>Unlock Premium</Text>
       <Text style={[styles.subtitle, { fontSize: getFontSize(16) }]}>
-        Get the most out of Forever Stories with unlimited access.
+        Preserve richer, deeper memories with Premium.
       </Text>
 
       {/* Story count warning */}
@@ -190,19 +190,19 @@ export default function PremiumScreen({ navigation }) {
         <FeatureItem
           icon="stories"
           text="Unlimited Stories"
-          description="Write as many stories as you want, no limits"
+          description="No limits on the memories you can capture"
+          getFontSize={getFontSize}
+        />
+        <FeatureItem
+          icon="followup"
+          text="AI Follow-up Questions"
+          description="AI helps draw out richer details after each story"
           getFontSize={getFontSize}
         />
         <FeatureItem
           icon="ai"
           text="AI Persona Chat"
-          description="Chat with an AI that speaks in your voice, powered by your stories"
-          getFontSize={getFontSize}
-        />
-        <FeatureItem
-          icon="support"
-          text="Priority Support"
-          description="Get help faster when you need it"
+          description="Let loved ones chat with an AI version of you, powered by your stories"
           getFontSize={getFontSize}
         />
       </View>
@@ -221,7 +221,7 @@ export default function PremiumScreen({ navigation }) {
             >
               {pkg.packageType === 'ANNUAL' && (
                 <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Save 17%</Text>
+                  <Text style={styles.saveBadgeText}>Save 7%</Text>
                 </View>
               )}
               <Text style={[styles.priceTitle, { fontSize: getFontSize(16) }]}>
@@ -289,8 +289,8 @@ export default function PremiumScreen({ navigation }) {
 function FeatureItem({ icon, text, description, getFontSize, active }) {
   const iconMap = {
     stories: '∞',
+    followup: '?',
     ai: '✦',
-    support: '★',
     check: '✓',
   };
 
