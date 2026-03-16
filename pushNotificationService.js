@@ -420,8 +420,11 @@ async function sendInviteNotification(pool, viewerEmail, ownerName, inviteCode, 
  */
 async function sendDailyPromptReminders(pool) {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Use Phoenix timezone to match the cron schedule
+    const phoenixDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Phoenix' });
+    console.log(`📅 Checking for daily prompt reminders (Phoenix date: ${phoenixDate})`);
 
+    // Find owners who haven't answered today (in Phoenix timezone)
     const usersResult = await pool.query(
       `SELECT DISTINCT u.id, u.full_name, u.current_streak
        FROM users u
@@ -429,17 +432,37 @@ async function sendDailyPromptReminders(pool) {
        AND u.id NOT IN (
          SELECT user_id
          FROM prompt_responses
-         WHERE DATE(created_at) = $1
+         WHERE DATE(created_at AT TIME ZONE 'America/Phoenix') = $1
        )`,
-      [today]
+      [phoenixDate]
     );
 
     console.log(`Found ${usersResult.rows.length} users who haven't answered today's prompt`);
 
+    // Check which users have push tokens registered
+    const usersWithTokens = [];
     for (const user of usersResult.rows) {
+      const tokenCheck = await pool.query(
+        'SELECT COUNT(*) FROM push_tokens WHERE user_id = $1 AND is_active = TRUE',
+        [user.id]
+      );
+      if (parseInt(tokenCheck.rows[0].count) > 0) {
+        usersWithTokens.push(user);
+      }
+    }
+    console.log(`Of those, ${usersWithTokens.length} have active push tokens`);
+
+    for (const user of usersWithTokens) {
+      // Ensure notification preferences exist before sending
+      await pool.query(
+        'INSERT INTO notification_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+        [user.id]
+      );
+
       await sendDailyPromptReminderNotification(pool, user.id, user.full_name, user.current_streak || 0);
     }
 
+    console.log('✅ Daily prompt reminder processing complete');
   } catch (error) {
     console.error('Error sending daily prompt reminders:', error);
   }
@@ -462,6 +485,7 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
     );
 
     if (tokensResult.rows.length === 0) {
+      console.log(`  ⏭️ User ${userName} (${userId}): No active push tokens, skipping`);
       return;
     }
 
@@ -474,7 +498,16 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
     );
 
     const prefs = prefsResult.rows[0];
-    if (!prefs || !prefs.notifications_enabled || !prefs.daily_prompt_enabled) {
+    if (!prefs) {
+      console.log(`  ⏭️ User ${userName} (${userId}): No notification preferences row, skipping`);
+      return;
+    }
+    if (!prefs.notifications_enabled) {
+      console.log(`  ⏭️ User ${userName} (${userId}): Notifications disabled by user, skipping`);
+      return;
+    }
+    if (!prefs.daily_prompt_enabled) {
+      console.log(`  ⏭️ User ${userName} (${userId}): Daily prompt reminders disabled, skipping`);
       return;
     }
 
@@ -518,6 +551,7 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
     }
 
     if (prefs.final_reminder_sent) {
+      console.log(`  ⏭️ User ${userName} (${userId}): Final reminder already sent, permanently skipping. Reset needed.`);
       return;
     }
 
@@ -545,7 +579,8 @@ async function sendDailyPromptReminderNotification(pool, userId, userName, strea
       };
     }
 
-    await sendBulkNotifications(deviceTokens, notification);
+    const sendResult = await sendBulkNotifications(deviceTokens, notification);
+    console.log(`  📤 User ${userName} (${userId}): Sent reminder to ${deviceTokens.length} device(s) - Result: ${JSON.stringify(sendResult)}`);
 
     const newConsecutiveSkips = (prefs.consecutive_skips || 0) + 1;
 

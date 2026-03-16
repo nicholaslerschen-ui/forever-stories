@@ -31,6 +31,7 @@ export default function StoryDetailScreen({ route, navigation }) {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
+  const [editedFollowUps, setEditedFollowUps] = useState([]);
 
   useEffect(() => {
     loadCurrentUser();
@@ -81,6 +82,14 @@ export default function StoryDetailScreen({ route, navigation }) {
     setEditedTitle(story.title || '');
     setExistingFiles(story.files || []); // Copy existing files
     setSelectedMedia([]); // Reset new media
+    // Initialize editable follow-ups
+    let followUps = [];
+    try {
+      followUps = typeof story.follow_up_questions === 'string'
+        ? JSON.parse(story.follow_up_questions)
+        : story.follow_up_questions || [];
+    } catch (e) {}
+    setEditedFollowUps(Array.isArray(followUps) ? followUps.map(item => ({ ...item })) : []);
     setIsEditing(true);
   };
 
@@ -89,6 +98,7 @@ export default function StoryDetailScreen({ route, navigation }) {
     setEditedText('');
     setSelectedMedia([]);
     setExistingFiles([]);
+    setEditedFollowUps([]);
   };
 
   const removeExistingFile = (fileId) => {
@@ -123,7 +133,8 @@ export default function StoryDetailScreen({ route, navigation }) {
       console.log('Existing file IDs:', existingFileIds);
       console.log('All file IDs being sent:', allFileIds);
 
-      await ApiService.updateStory(token, storyId, editedText, editedTitle, allFileIds);
+      const followUpData = editedFollowUps.length > 0 ? editedFollowUps : null;
+      await ApiService.updateStory(token, storyId, editedText, editedTitle, allFileIds, followUpData);
       console.log('Story updated, reloading...');
 
       // Reload the story to get updated data with signed URLs
@@ -132,6 +143,7 @@ export default function StoryDetailScreen({ route, navigation }) {
       setIsEditing(false);
       setSelectedMedia([]);
       setExistingFiles([]);
+      setEditedFollowUps([]);
       Alert.alert('Success', 'Story updated successfully!');
     } catch (error) {
       console.error('Save error:', error);
@@ -221,7 +233,35 @@ export default function StoryDetailScreen({ route, navigation }) {
         )}
       </View>
 
-      {/* Follow-up Q&A */}
+      {/* Follow-up Q&A - Edit Mode */}
+      {isEditing && editedFollowUps.length > 0 && (
+        <View style={styles.followUpSection}>
+          <Text style={[styles.followUpLabel, { fontSize: getFontSize(12) }]}>Follow-up Details</Text>
+          {editedFollowUps.map((item, index) => (
+            <View key={index} style={styles.followUpItem}>
+              <View style={styles.followUpQuestionCard}>
+                <Text style={[styles.followUpQuestion, { fontSize: getFontSize(15) }]}>
+                  {item.question}
+                </Text>
+              </View>
+              <TextInput
+                style={[styles.followUpAnswerInput, { fontSize: getFontSize(16) }]}
+                value={item.answer}
+                onChangeText={(text) => {
+                  const updated = [...editedFollowUps];
+                  updated[index] = { ...updated[index], answer: text };
+                  setEditedFollowUps(updated);
+                }}
+                multiline
+                textAlignVertical="top"
+                placeholder="Edit your answer..."
+              />
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Follow-up Q&A - View Mode */}
       {!isEditing && story.follow_up_questions && (() => {
         let followUps = [];
         try {
@@ -570,6 +610,16 @@ const styles = StyleSheet.create({
     color: '#111',
     lineHeight: 24,
     paddingLeft: 4,
+  },
+  followUpAnswerInput: {
+    color: '#111',
+    lineHeight: 24,
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#f9fafb',
   },
   mediaSection: {
     paddingHorizontal: 20,

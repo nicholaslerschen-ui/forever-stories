@@ -124,12 +124,24 @@ if (
   process.env.TWILIO_ACCOUNT_SID &&
   process.env.TWILIO_ACCOUNT_SID.startsWith('AC') &&
   process.env.TWILIO_AUTH_TOKEN &&
-  process.env.TWILIO_PHONE_NUMBER
+  (process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_MESSAGING_SERVICE_SID)
 ) {
   twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-  console.log('📱 SMS service configured (Twilio)');
+  if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+    console.log('📱 SMS service configured (Twilio via Messaging Service)');
+  } else {
+    console.log('📱 SMS service configured (Twilio via phone number)');
+  }
 } else {
-  console.log('⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)');
+  console.log('⚠️  SMS service not configured (set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_MESSAGING_SERVICE_SID or TWILIO_PHONE_NUMBER)');
+}
+
+// Helper: Get Twilio sender config (prefers Messaging Service SID over phone number)
+function getTwilioSender() {
+  if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+    return { messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID };
+  }
+  return { from: process.env.TWILIO_PHONE_NUMBER };
 }
 
 // Helper: Generate unique 8-character invite code
@@ -154,7 +166,7 @@ async function sendInviteSMS(recipientPhone, inviteCode, ownerName) {
 
   await twilioClient.messages.create({
     body: message,
-    from: process.env.TWILIO_PHONE_NUMBER,
+    ...getTwilioSender(),
     to: recipientPhone
   });
 
@@ -214,7 +226,7 @@ async function sendReverseInviteSMS(recipientPhone, inviteCode, viewerName) {
 
   await twilioClient.messages.create({
     body: message,
-    from: process.env.TWILIO_PHONE_NUMBER,
+    ...getTwilioSender(),
     to: recipientPhone
   });
 
@@ -465,6 +477,12 @@ const handleSignup = async (req, res) => {
     // Create user stats
     await pool.query(
       'INSERT INTO user_stats (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+      [user.id]
+    );
+
+    // Create notification preferences (defaults: all enabled)
+    await pool.query(
+      'INSERT INTO notification_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
       [user.id]
     );
 
@@ -2758,7 +2776,7 @@ app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res)
   try {
     const userId = req.user.userId;
     const { responseId } = req.params;
-    const { response, title, fileIds } = req.body;
+    const { response, title, fileIds, followUpData } = req.body;
 
     console.log('UPDATE STORY - Response ID:', responseId);
     console.log('UPDATE STORY - Title:', title);
@@ -2778,13 +2796,17 @@ app.put('/api/prompts/response/:responseId', authenticateToken, async (req, res)
       return res.status(404).json({ error: 'Story not found' });
     }
 
-    // Update the response text and title
+    // Update the response text, title, and follow-up data
+    const followUpJson = followUpData && Array.isArray(followUpData) && followUpData.length > 0
+      ? JSON.stringify(followUpData)
+      : '[]';
+
     const result = await pool.query(
       `UPDATE prompt_responses
-       SET response_text = $1, title = $2
-       WHERE id = $3 AND user_id = $4
+       SET response_text = $1, title = $2, follow_up_questions = $3
+       WHERE id = $4 AND user_id = $5
        RETURNING *`,
-      [response.trim(), title || null, responseId, userId]
+      [response.trim(), title || null, followUpJson, responseId, userId]
     );
 
     // Handle file updates if fileIds provided
@@ -3846,6 +3868,13 @@ app.put('/api/notifications/preferences', authenticateToken, async (req, res) =>
     if (typeof notifications_enabled !== 'undefined') {
       updates.push(`notifications_enabled = $${paramIndex++}`);
       values.push(notifications_enabled);
+      // When re-enabling notifications, reset cooldown state so they start receiving again
+      if (notifications_enabled) {
+        updates.push('consecutive_skips = 0');
+        updates.push('in_cooldown = FALSE');
+        updates.push('cooldown_until = NULL');
+        updates.push('final_reminder_sent = FALSE');
+      }
     }
     if (typeof invites_enabled !== 'undefined') {
       updates.push(`invites_enabled = $${paramIndex++}`);
@@ -3937,6 +3966,46 @@ app.post('/api/notifications/send-daily-reminders', async (req, res) => {
   } catch (error) {
     console.error('Daily reminder error:', error);
     res.status(500).json({ error: 'Failed to send daily reminders' });
+  }
+});
+
+// Debug: Full notification diagnostic for current user
+app.get('/api/notifications/debug', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const [tokens, prefs, recentLogs, user] = await Promise.all([
+      pool.query('SELECT device_token, device_type, is_active, last_used_at FROM push_tokens WHERE user_id = $1', [userId]),
+      pool.query('SELECT * FROM notification_preferences WHERE user_id = $1', [userId]),
+      pool.query('SELECT notification_type, title, sent_at, delivered FROM notification_log WHERE user_id = $1 ORDER BY sent_at DESC LIMIT 10', [userId]),
+      pool.query('SELECT id, full_name, role, current_streak FROM users WHERE id = $1', [userId]),
+    ]);
+
+    const phoenixDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Phoenix' });
+    const answeredToday = await pool.query(
+      `SELECT COUNT(*) FROM prompt_responses WHERE user_id = $1 AND DATE(created_at AT TIME ZONE 'America/Phoenix') = $2`,
+      [userId, phoenixDate]
+    );
+
+    res.json({
+      user: user.rows[0],
+      pushTokens: tokens.rows,
+      hasActiveTokens: tokens.rows.some(t => t.is_active),
+      notificationPreferences: prefs.rows[0] || 'NO PREFERENCES ROW - THIS IS A BUG',
+      answeredToday: parseInt(answeredToday.rows[0].count) > 0,
+      phoenixDate,
+      recentNotifications: recentLogs.rows,
+      diagnosis: !tokens.rows.some(t => t.is_active) ? 'NO_ACTIVE_TOKENS'
+        : !prefs.rows[0] ? 'NO_PREFERENCES_ROW'
+        : !prefs.rows[0].notifications_enabled ? 'NOTIFICATIONS_DISABLED'
+        : !prefs.rows[0].daily_prompt_enabled ? 'DAILY_PROMPT_DISABLED'
+        : prefs.rows[0].final_reminder_sent ? 'PERMANENTLY_STOPPED_FINAL_SENT'
+        : prefs.rows[0].in_cooldown ? 'IN_COOLDOWN'
+        : 'SHOULD_RECEIVE_REMINDERS',
+    });
+  } catch (error) {
+    console.error('Debug notification error:', error);
+    res.status(500).json({ error: 'Failed to get debug info' });
   }
 });
 
@@ -4203,6 +4272,17 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS title VARCHAR(500);
     `);
 
+    // Backfill notification preferences for users missing them
+    const backfillResult = await pool.query(`
+      INSERT INTO notification_preferences (user_id)
+      SELECT id FROM users
+      WHERE id NOT IN (SELECT user_id FROM notification_preferences)
+      ON CONFLICT (user_id) DO NOTHING
+    `);
+    if (backfillResult.rowCount > 0) {
+      console.log(`🔔 Backfilled notification preferences for ${backfillResult.rowCount} users`);
+    }
+
     console.log('✅ Database migrations completed');
   } catch (error) {
     console.error('❌ Database migration failed:', error);
@@ -4214,8 +4294,8 @@ async function runMigrations() {
 runMigrations();
 
 console.log('📅 Cron Jobs Initialized:');
-console.log('   • Daily Prompt Reminders: 8:00 PM daily');
-console.log('   • Weekly Viewer Reminders: 10:00 AM every Sunday');
+console.log('   • Daily Prompt Reminders: 9:00 AM daily (America/Phoenix)');
+console.log('   • Weekly Viewer Reminders: 10:00 AM every Sunday (America/Phoenix)');
 console.log('');
 
 module.exports = app;
