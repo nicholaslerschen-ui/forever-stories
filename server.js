@@ -3974,12 +3974,14 @@ app.get('/api/notifications/debug', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [tokens, prefs, recentLogs, user] = await Promise.all([
-      pool.query('SELECT device_token, device_type, is_active, last_used_at FROM push_tokens WHERE user_id = $1', [userId]),
-      pool.query('SELECT * FROM notification_preferences WHERE user_id = $1', [userId]),
-      pool.query('SELECT notification_type, title, sent_at, delivered FROM notification_log WHERE user_id = $1 ORDER BY sent_at DESC LIMIT 10', [userId]),
-      pool.query('SELECT id, full_name, role, current_streak FROM users WHERE id = $1', [userId]),
-    ]);
+    const tokens = await pool.query('SELECT device_token, device_type, is_active, last_used_at FROM push_tokens WHERE user_id = $1', [userId]);
+    const prefs = await pool.query('SELECT * FROM notification_preferences WHERE user_id = $1', [userId]);
+    const user = await pool.query('SELECT id, full_name, role FROM users WHERE id = $1', [userId]);
+
+    let recentLogs = { rows: [] };
+    try {
+      recentLogs = await pool.query('SELECT notification_type, title, sent_at, delivered FROM notification_log WHERE user_id = $1 ORDER BY sent_at DESC LIMIT 10', [userId]);
+    } catch (e) { /* notification_log may not exist */ }
 
     const phoenixDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Phoenix' });
     const answeredToday = await pool.query(
