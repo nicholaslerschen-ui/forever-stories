@@ -453,6 +453,19 @@ export default function DashboardScreen({ navigation }) {
                       💬 Ask a Question
                     </Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() =>
+                      navigation.navigate('AIChat', {
+                        ownerId: currentOwner?.owner_id,
+                        ownerName: currentOwner?.owner_name,
+                      })
+                    }
+                  >
+                    <Text style={[styles.secondaryButtonText, { fontSize: getFontSize(16) }]}>
+                      🤖 Chat with AI Persona
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -511,6 +524,16 @@ export default function DashboardScreen({ navigation }) {
               </TouchableOpacity>
             )}
 
+            {!isViewer && (
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigation.navigate('AIChat')}
+              >
+                <Text style={styles.navIcon}>🤖</Text>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>AI Chat</Text>
+              </TouchableOpacity>
+            )}
+
             {isViewer && currentOwner && (
               <TouchableOpacity
                 style={styles.navButton}
@@ -518,6 +541,21 @@ export default function DashboardScreen({ navigation }) {
               >
                 <Text style={styles.navIcon}>💬</Text>
                 <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>Questions</Text>
+              </TouchableOpacity>
+            )}
+
+            {isViewer && currentOwner && (
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() =>
+                  navigation.navigate('AIChat', {
+                    ownerId: currentOwner.owner_id,
+                    ownerName: currentOwner.owner_name,
+                  })
+                }
+              >
+                <Text style={styles.navIcon}>🤖</Text>
+                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>AI Chat</Text>
               </TouchableOpacity>
             )}
 

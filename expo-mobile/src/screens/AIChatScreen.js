@@ -13,13 +13,21 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import { useFontSize } from '../context/FontSizeContext';
 
-export default function AIChatScreen({ navigation }) {
+export default function AIChatScreen({ navigation, route }) {
+  const { getFontSize } = useFontSize();
+  const ownerId = route.params?.ownerId || null;
+  const ownerName = route.params?.ownerName || null;
+  const isViewerMode = !!ownerId;
+
   const [messages, setMessages] = useState([
     {
       id: '1',
       role: 'assistant',
-      content: 'Hi! I\'m your AI persona, trained on your stories. Ask me anything about your memories!',
+      content: isViewerMode
+        ? `Hi! I'm ${ownerName}'s AI persona, built from their life stories. Ask me anything about their memories!`
+        : "Hi! I'm your AI persona, trained on your stories. Ask me anything about your memories!",
     },
   ]);
   const [inputText, setInputText] = useState('');
@@ -34,8 +42,14 @@ export default function AIChatScreen({ navigation }) {
   const checkPremiumStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      const subStatus = await ApiService.getSubscriptionStatus(token);
-      setIsPremium(subStatus.isPremium);
+      if (isViewerMode) {
+        // For viewers, try sending a test-like request to check if owner has premium
+        // We'll just set premium to true and handle errors when sending
+        setIsPremium(true);
+      } else {
+        const subStatus = await ApiService.getSubscriptionStatus(token);
+        setIsPremium(subStatus.isPremium);
+      }
     } catch (error) {
       console.error('Failed to check premium status:', error);
       setIsPremium(false);
@@ -64,7 +78,7 @@ export default function AIChatScreen({ navigation }) {
         content: msg.content,
       }));
 
-      const response = await ApiService.sendAIMessage(token, inputText, history);
+      const response = await ApiService.sendAIMessage(token, inputText, history, ownerId);
 
       const aiMessage = {
         id: (Date.now() + 1).toString(),
@@ -75,7 +89,18 @@ export default function AIChatScreen({ navigation }) {
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       if (error.upgradeRequired) {
-        setIsPremium(false);
+        if (error.ownerNotPremium) {
+          // Owner doesn't have premium — viewer can't do anything about this
+          const errorMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `AI Persona isn't available yet. ${ownerName} needs to upgrade to Premium to enable this feature.`,
+          };
+          setMessages(prev => [...prev, errorMessage]);
+          setIsPremium(false);
+        } else {
+          setIsPremium(false);
+        }
         return;
       }
       const errorMessage = {
@@ -99,6 +124,7 @@ export default function AIChatScreen({ navigation }) {
       <Text
         style={[
           styles.messageText,
+          { fontSize: getFontSize(16) },
           item.role === 'user' ? styles.userMessageText : styles.aiMessageText,
         ]}
       >
@@ -116,6 +142,11 @@ export default function AIChatScreen({ navigation }) {
     }
   }, [messages]);
 
+  const headerTitle = isViewerMode ? `${ownerName}'s Persona` : 'AI Persona';
+  const placeholder = isViewerMode
+    ? `Ask about ${ownerName}'s memories...`
+    : 'Ask about your memories...';
+
   // Loading state
   if (isPremium === null) {
     return (
@@ -125,15 +156,15 @@ export default function AIChatScreen({ navigation }) {
     );
   }
 
-  // Not premium - show paywall
-  if (!isPremium) {
+  // Not premium - show paywall (only for owners testing their own persona)
+  if (!isPremium && !isViewerMode) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={[styles.backText, { fontSize: getFontSize(16) }]}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>AI Persona</Text>
+          <Text style={[styles.headerTitle, { fontSize: getFontSize(18) }]}>{headerTitle}</Text>
           <View style={{ width: 50 }} />
         </View>
 
@@ -141,19 +172,44 @@ export default function AIChatScreen({ navigation }) {
           <View style={styles.paywallIcon}>
             <Text style={styles.paywallIconText}>✦</Text>
           </View>
-          <Text style={styles.paywallTitle}>Premium Feature</Text>
-          <Text style={styles.paywallDescription}>
+          <Text style={[styles.paywallTitle, { fontSize: getFontSize(24) }]}>Premium Feature</Text>
+          <Text style={[styles.paywallDescription, { fontSize: getFontSize(16) }]}>
             AI Persona lets loved ones chat with an AI version of you, powered by your life stories. It speaks in your voice and recalls your memories.
           </Text>
-          <Text style={styles.paywallDescription}>
+          <Text style={[styles.paywallDescription, { fontSize: getFontSize(16) }]}>
             Upgrade to Premium to unlock this feature, follow-up questions, and unlimited stories.
           </Text>
           <TouchableOpacity
             style={styles.upgradeButton}
             onPress={() => navigation.navigate('Premium')}
           >
-            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            <Text style={[styles.upgradeButtonText, { fontSize: getFontSize(18) }]}>Upgrade to Premium</Text>
           </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Owner not premium but viewer trying to use (show friendly message)
+  if (!isPremium && isViewerMode) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={[styles.backText, { fontSize: getFontSize(16) }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { fontSize: getFontSize(18) }]}>{headerTitle}</Text>
+          <View style={{ width: 50 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.paywallContainer}>
+          <View style={styles.paywallIcon}>
+            <Text style={styles.paywallIconText}>✦</Text>
+          </View>
+          <Text style={[styles.paywallTitle, { fontSize: getFontSize(24) }]}>Not Available Yet</Text>
+          <Text style={[styles.paywallDescription, { fontSize: getFontSize(16) }]}>
+            AI Persona isn't available yet. {ownerName} needs to upgrade to Premium to enable this feature.
+          </Text>
         </ScrollView>
       </View>
     );
@@ -168,9 +224,9 @@ export default function AIChatScreen({ navigation }) {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={[styles.backText, { fontSize: getFontSize(16) }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Persona</Text>
+        <Text style={[styles.headerTitle, { fontSize: getFontSize(18) }]}>{headerTitle}</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -187,8 +243,8 @@ export default function AIChatScreen({ navigation }) {
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.input}
-          placeholder="Ask about your memories..."
+          style={[styles.input, { fontSize: getFontSize(16) }]}
+          placeholder={placeholder}
           value={inputText}
           onChangeText={setInputText}
           multiline
@@ -205,7 +261,7 @@ export default function AIChatScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Text style={[styles.sendButtonText, { fontSize: getFontSize(16) }]}>Send</Text>
           )}
         </TouchableOpacity>
       </View>

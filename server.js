@@ -3472,31 +3472,71 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
 // AI PERSONA - User's Digital Twin
 // ============================================================================
 
-// Chat with AI persona (speaks AS the user, not TO the user)
-// Premium feature - requires active subscription
-app.post('/api/ai/persona', authenticateToken, requirePremium, async (req, res) => {
+// Chat with AI persona (speaks AS the owner, not TO the owner)
+// Premium feature - requires owner to have active subscription
+app.post('/api/ai/persona', authenticateToken, async (req, res) => {
   try {
-    const { message, history } = req.body;
-    const userId = req.user.userId;
+    const { message, history, ownerId } = req.body;
+    const callerId = req.user.userId;
 
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Get user profile
+    // Determine whose persona to use
+    const targetUserId = ownerId || callerId;
+
+    // If viewer is accessing an owner's persona, verify access
+    if (ownerId && ownerId !== callerId) {
+      const accessCheck = await pool.query(
+        'SELECT id FROM access_grants WHERE owner_id = $1 AND recipient_user_id = $2 AND is_active = TRUE',
+        [ownerId, callerId]
+      );
+      if (accessCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'You do not have access to this persona' });
+      }
+    }
+
+    // Check if the owner has premium subscription
+    const subResult = await pool.query(
+      `SELECT subscription_status, subscription_expires_at FROM users WHERE id = $1`,
+      [targetUserId]
+    );
+    const ownerUser = subResult.rows[0];
+    const isPremium = ownerUser &&
+      ownerUser.subscription_status === 'active' &&
+      ownerUser.subscription_expires_at &&
+      new Date(ownerUser.subscription_expires_at) > new Date();
+
+    if (!isPremium) {
+      return res.status(403).json({
+        error: 'Premium subscription required',
+        upgrade_required: true,
+        owner_not_premium: ownerId && ownerId !== callerId
+      });
+    }
+
+    // Get owner's name
+    const ownerNameResult = await pool.query(
+      'SELECT full_name FROM users WHERE id = $1',
+      [targetUserId]
+    );
+    const ownerName = ownerNameResult.rows[0]?.full_name || 'this person';
+
+    // Get owner's profile
     const profileResult = await pool.query(
       'SELECT * FROM user_profiles WHERE user_id = $1',
-      [userId]
+      [targetUserId]
     );
 
-    // Get all user's story responses
+    // Get all owner's story responses
     const responsesResult = await pool.query(
-      `SELECT pr.response_text, pr.prompt_text, p.prompt_text as question, p.domain
+      `SELECT pr.response_text, pr.prompt_text, pr.follow_up_questions, p.prompt_text as question, p.domain
        FROM prompt_responses pr
        LEFT JOIN prompts p ON pr.prompt_id = p.id
        WHERE pr.user_id = $1
        ORDER BY pr.created_at DESC`,
-      [userId]
+      [targetUserId]
     );
 
     // Build context about the user
@@ -3551,48 +3591,55 @@ app.post('/api/ai/persona', authenticateToken, requirePremium, async (req, res) 
       }
     }
 
-    // Add user's actual stories
+    // Add owner's actual stories
     if (responsesResult.rows.length > 0) {
       userContext += '\n--- My Stories and Memories ---\n';
       responsesResult.rows.forEach((row, index) => {
         const question = row.question || row.prompt_text || 'A memory';
         userContext += `\nQ: ${question}\nMy answer: ${row.response_text}\n`;
+
+        // Include follow-up Q&A if available
+        if (row.follow_up_questions) {
+          let followUps = [];
+          try {
+            followUps = typeof row.follow_up_questions === 'string'
+              ? JSON.parse(row.follow_up_questions)
+              : row.follow_up_questions;
+          } catch (e) {}
+          if (Array.isArray(followUps) && followUps.length > 0) {
+            followUps.forEach(fu => {
+              if (fu.question && fu.answer) {
+                userContext += `Follow-up Q: ${fu.question}\nMy answer: ${fu.answer}\n`;
+              }
+            });
+          }
+        }
       });
     } else {
       userContext += '\nI haven\'t shared many stories yet, but I\'m looking forward to documenting my memories.\n';
     }
 
-    // Create system prompt - THIS IS KEY!
-    const systemPrompt = `You are an AI persona representing a real person. Your job is to speak AS this person, not TO them.
+    // Create system prompt
+    const systemPrompt = `You are an AI persona representing ${ownerName}. Your job is to speak AS ${ownerName}, not TO them.
 
 CRITICAL RULES:
-1. ALWAYS speak in FIRST PERSON ("I", "my", "me") - you ARE this person
-2. Base ALL responses on the person's actual stories and profile provided below
-3. If asked about something not in their stories, say "I haven't shared a story about that yet" - NEVER make up facts
+1. ALWAYS speak in FIRST PERSON ("I", "my", "me") - you ARE ${ownerName}
+2. Base ALL responses on ${ownerName}'s actual stories and profile provided below
+3. If asked about something not in the stories, say "I haven't shared a story about that yet" - NEVER make up facts
 4. Capture their voice, tone, and personality from their writing
 5. Reference specific memories when relevant
-6. Be warm, personal, and authentic - like the real person talking
+6. Be warm, personal, and authentic - like ${ownerName} talking in person
 
 ANSWERING QUESTIONS:
 - When asked about your life, memories, or experiences, ANSWER directly using your actual stories
 - Share your stories, wisdom, and perspective as if you were there talking to them
 - DO NOT ask them questions like "Tell me more about..." or "What do you want to know?" - YOU are the one being asked!
-- Exception: You CAN ask clarifying questions if someone is seeking your advice on a decision (e.g., "What are your main concerns?" or "Tell me more about the situation")
-
-EXAMPLE INTERACTIONS:
-User: "What was your childhood like?"
-You: "I grew up in [location]. One memory that stands out is [specific story from your responses]..."
-
-User: "I'm trying to decide whether to take this new job. What would you do?"
-You: "Tell me more about the opportunity - what appeals to you about it? What are your hesitations?" (This is okay - giving advice)
-
-User: "Tell me about your best friend"
-You: "My best friend was [name]. We [specific story]..." (Answer directly, don't ask them questions)
+- Exception: You CAN ask clarifying questions if someone is seeking your advice on a decision
 
 WHO YOU ARE:
 ${userContext}
 
-Remember: You are speaking AS this person to their family members or friends. They want to hear YOUR (the person's) stories, memories, and wisdom in YOUR own words.`;
+Remember: You are speaking AS ${ownerName} to their family members or friends. They want to hear YOUR stories, memories, and wisdom in YOUR own words.`;
 
     // Check if Anthropic API key exists
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -3639,7 +3686,8 @@ Remember: You are speaking AS this person to their family members or friends. Th
 
     res.json({
       message: aiMessage,
-      storiesUsed: responsesResult.rows.length
+      storiesUsed: responsesResult.rows.length,
+      ownerName: ownerName
     });
 
   } catch (error) {

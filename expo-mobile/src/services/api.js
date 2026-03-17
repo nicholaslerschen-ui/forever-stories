@@ -152,14 +152,14 @@ class ApiService {
     return response.json();
   }
 
-  async sendAIMessage(token, message, history = []) {
+  async sendAIMessage(token, message, history = [], ownerId = null) {
+    const body = { message, history };
+    if (ownerId) body.ownerId = ownerId;
+
     const response = await fetch(`${API_URL}/api/ai/persona`, {
       method: 'POST',
       headers: getHeaders(token),
-      body: JSON.stringify({
-        message,
-        history,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -167,6 +167,7 @@ class ApiService {
       if (errorData.upgrade_required) {
         const error = new Error('Premium subscription required');
         error.upgradeRequired = true;
+        error.ownerNotPremium = errorData.owner_not_premium || false;
         throw error;
       }
       throw new Error('Failed to send message');
