@@ -3497,16 +3497,8 @@ app.post('/api/ai/persona', authenticateToken, async (req, res) => {
       }
     }
 
-    // Check if the owner has premium subscription
-    const subResult = await pool.query(
-      `SELECT subscription_status, subscription_expires_at FROM users WHERE id = $1`,
-      [targetUserId]
-    );
-    const ownerUser = subResult.rows[0];
-    const isPremium = ownerUser &&
-      ownerUser.subscription_status === 'active' &&
-      ownerUser.subscription_expires_at &&
-      new Date(ownerUser.subscription_expires_at) > new Date();
+    // Check if the owner has premium subscription (using same logic as requirePremium middleware)
+    const isPremium = await checkPremiumAccess(targetUserId);
 
     if (!isPremium) {
       return res.status(403).json({
