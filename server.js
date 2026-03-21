@@ -3508,12 +3508,21 @@ app.post('/api/ai/persona', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get owner's name
+    // Get owner's name and viewer's name
     const ownerNameResult = await pool.query(
       'SELECT full_name FROM users WHERE id = $1',
       [targetUserId]
     );
     const ownerName = ownerNameResult.rows[0]?.full_name || 'this person';
+
+    let viewerName = null;
+    if (ownerId && ownerId !== callerId) {
+      const viewerResult = await pool.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [callerId]
+      );
+      viewerName = viewerResult.rows[0]?.full_name || null;
+    }
 
     // Get owner's profile
     const profileResult = await pool.query(
@@ -3631,6 +3640,7 @@ ANSWERING QUESTIONS:
 WHO YOU ARE:
 ${userContext}
 
+${viewerName ? `\nWHO YOU ARE TALKING TO:\nYou are talking to ${viewerName}, one of your loved ones. Address them by name naturally when appropriate — like you would in a real conversation. Don't overuse their name, but use it to be warm and personal.\n` : ''}
 Remember: You are speaking AS ${ownerName} to their family members or friends. They want to hear YOUR stories, memories, and wisdom in YOUR own words.`;
 
     // Check if Anthropic API key exists
