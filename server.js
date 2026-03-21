@@ -3650,6 +3650,33 @@ Remember: You are speaking AS ${ownerName} to their family members or friends. T
       });
     }
 
+    // Build messages for Anthropic API (must start with 'user' role)
+    const chatHistory = (history || [])
+      .map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      }));
+
+    // Remove leading assistant messages (e.g. welcome message) since API requires user-first
+    while (chatHistory.length > 0 && chatHistory[0].role === 'assistant') {
+      chatHistory.shift();
+    }
+
+    // Add the current user message
+    chatHistory.push({ role: 'user', content: message });
+
+    // Ensure no consecutive same-role messages (merge if needed)
+    const cleanedMessages = [];
+    for (const msg of chatHistory) {
+      if (cleanedMessages.length > 0 && cleanedMessages[cleanedMessages.length - 1].role === msg.role) {
+        cleanedMessages[cleanedMessages.length - 1].content += '\n' + msg.content;
+      } else {
+        cleanedMessages.push(msg);
+      }
+    }
+
+    console.log('AI Persona: Sending', cleanedMessages.length, 'messages to Anthropic');
+
     // Call Anthropic API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -3662,22 +3689,13 @@ Remember: You are speaking AS ${ownerName} to their family members or friends. T
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         system: systemPrompt,
-        messages: [
-          ...(history || []).map(msg => ({
-            role: msg.role === 'assistant' ? 'assistant' : 'user',
-            content: msg.content
-          })),
-          {
-            role: 'user',
-            content: message
-          }
-        ]
+        messages: cleanedMessages
       })
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Anthropic API error:', error);
+      const errorText = await response.text();
+      console.error('Anthropic API error:', response.status, errorText);
       return res.status(500).json({ error: 'Failed to generate response' });
     }
 
