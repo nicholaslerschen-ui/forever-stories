@@ -1507,21 +1507,11 @@ app.post('/api/invites/send-reverse', authenticateToken, async (req, res) => {
 // Viewer accepts invite
 app.post('/api/invites/accept', authenticateToken, async (req, res) => {
   try {
-    const viewerId = req.user.userId;
+    const userId = req.user.userId;
     const { inviteCode } = req.body;
 
     if (!inviteCode) {
       return res.status(400).json({ error: 'Invite code required' });
-    }
-
-    // Verify user is a Viewer
-    const viewerCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [viewerId]
-    );
-
-    if (viewerCheck.rows.length === 0 || viewerCheck.rows[0].role !== 'viewer') {
-      return res.status(403).json({ error: 'Only viewers can accept invites' });
     }
 
     // Find and validate invite token
@@ -1537,6 +1527,11 @@ app.post('/api/invites/accept', authenticateToken, async (req, res) => {
 
     const invite = inviteResult.rows[0];
 
+    // Can't accept your own invite
+    if (invite.owner_id === userId) {
+      return res.status(400).json({ error: 'You cannot accept your own invite' });
+    }
+
     // Check if already used
     if (invite.used_at) {
       return res.status(400).json({ error: 'This invite has already been used' });
@@ -1551,17 +1546,17 @@ app.post('/api/invites/accept', authenticateToken, async (req, res) => {
     const existingAccess = await pool.query(
       `SELECT id FROM access_grants
        WHERE owner_id = $1 AND recipient_user_id = $2`,
-      [invite.owner_id, viewerId]
+      [invite.owner_id, userId]
     );
 
     if (existingAccess.rows.length > 0) {
       return res.status(400).json({ error: 'You already have access to this account' });
     }
 
-    // Get viewer email
-    const viewerEmail = await pool.query(
+    // Get user email
+    const userEmail = await pool.query(
       'SELECT email FROM users WHERE id = $1',
-      [viewerId]
+      [userId]
     );
 
     // Create access grant (access is ON by default for invites)
@@ -1569,7 +1564,7 @@ app.post('/api/invites/accept', authenticateToken, async (req, res) => {
       `INSERT INTO access_grants
        (owner_id, recipient_email, recipient_user_id, is_active, invited_via_code, invited_at, access_granted_at, granted_at)
        VALUES ($1, $2, $3, TRUE, $4, NOW(), NOW(), NOW())`,
-      [invite.owner_id, viewerEmail.rows[0].email, viewerId, inviteCode.toUpperCase()]
+      [invite.owner_id, userEmail.rows[0].email, userId, inviteCode.toUpperCase()]
     );
 
     // Mark invite as used
@@ -1577,7 +1572,7 @@ app.post('/api/invites/accept', authenticateToken, async (req, res) => {
       `UPDATE invite_tokens
        SET used_at = NOW(), used_by_user_id = $1, is_active = FALSE
        WHERE id = $2`,
-      [viewerId, invite.id]
+      [userId, invite.id]
     );
 
     // Get owner info
@@ -1657,22 +1652,12 @@ app.get('/api/access/my-viewers', authenticateToken, async (req, res) => {
   }
 });
 
-// Viewer gets list of all owners they have access to
+// Get list of all owners the current user has access to (works for any role)
 app.get('/api/viewers/my-owners', authenticateToken, async (req, res) => {
   try {
-    const viewerId = req.user.userId;
+    const userId = req.user.userId;
 
-    // Verify user is a viewer
-    const userCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [viewerId]
-    );
-
-    if (userCheck.rows[0]?.role !== 'viewer') {
-      return res.status(403).json({ error: 'Only viewers can access this endpoint' });
-    }
-
-    // Get all owners this viewer has access to
+    // Get all owners this user has access to via access_grants
     const result = await pool.query(
       `SELECT
         ag.owner_id,
@@ -1686,7 +1671,7 @@ app.get('/api/viewers/my-owners', authenticateToken, async (req, res) => {
          AND ag.is_active = TRUE
          AND ag.revoked_at IS NULL
        ORDER BY ag.access_granted_at DESC`,
-      [viewerId]
+      [userId]
     );
 
     res.json({ owners: result.rows });

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
+export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAcceptInvite }) {
   const [owners, setOwners] = useState([]);
   const [currentOwnerId, setCurrentOwnerId] = useState(null);
   const [userName, setUserName] = useState('');
@@ -24,10 +24,14 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
 
       setUserName(parsedUser?.full_name || parsedUser?.email || 'Myself');
 
-      // Get all owners this viewer has access to
-      const data = await ApiService.getMyOwners(token);
-
-      setOwners(data.owners);
+      // Get all owners this user has access to
+      try {
+        const data = await ApiService.getMyOwners(token);
+        setOwners(data.owners || []);
+      } catch (err) {
+        console.log('No connected accounts:', err.message);
+        setOwners([]);
+      }
       setCurrentOwnerId(currentOwner);
     } catch (error) {
       console.error('Load owners error:', error);
@@ -68,7 +72,7 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
     </TouchableOpacity>
   );
 
-  const isMyselfActive = currentOwnerId === 'myself';
+  const isMyselfActive = currentOwnerId === 'myself' || !currentOwnerId;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -101,6 +105,15 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
             keyExtractor={(item) => item.owner_id}
             style={styles.list}
           />
+
+          {onAcceptInvite && (
+            <TouchableOpacity
+              style={styles.acceptInviteButton}
+              onPress={() => { onClose(); onAcceptInvite(); }}
+            >
+              <Text style={styles.acceptInviteText}>+ Accept Invite Code</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeText}>Cancel</Text>
@@ -179,6 +192,20 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 24,
+    color: '#e11d48',
+  },
+  acceptInviteButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+  },
+  acceptInviteText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#e11d48',
   },
   closeButton: {

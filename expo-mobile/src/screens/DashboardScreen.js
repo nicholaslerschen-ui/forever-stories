@@ -204,9 +204,10 @@ export default function DashboardScreen({ navigation }) {
       setUser(parsedUser);
       setStats(statsData.stats);
 
-      // Check daily prompt status for owners OR viewers in writer mode
+      // Check daily prompt status when in writer mode
       const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
-      if (parsedUser?.role === 'owner' || storedOwnerId === 'myself') {
+      const writerMode = !storedOwnerId || storedOwnerId === 'myself';
+      if (writerMode) {
         console.log('📊 loadUserData: Checking daily prompt status...');
         await checkDailyPromptStatus(); // Wait for this to complete
       }
@@ -244,23 +245,18 @@ export default function DashboardScreen({ navigation }) {
 
   const loadCurrentOwner = async () => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      const parsedUser = JSON.parse(userData);
+      const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
+      setCurrentOwnerId(storedOwnerId);
 
-      // Only load owner info if user is a viewer
-      if (parsedUser?.role === 'viewer') {
-        const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
-        setCurrentOwnerId(storedOwnerId);
-
-        if (storedOwnerId === 'myself') {
-          // Viewer is in writer mode — no owner context needed
-          setCurrentOwner(null);
-        } else if (storedOwnerId) {
-          const token = await AsyncStorage.getItem('authToken');
-          const data = await ApiService.getMyOwners(token);
-          const owner = data.owners.find(o => o.owner_id === storedOwnerId);
-          setCurrentOwner(owner);
-        }
+      if (!storedOwnerId || storedOwnerId === 'myself') {
+        // In writer mode — no owner context needed
+        setCurrentOwner(null);
+      } else {
+        // Viewing someone else — load their info
+        const token = await AsyncStorage.getItem('authToken');
+        const data = await ApiService.getMyOwners(token);
+        const owner = data.owners.find(o => o.owner_id === storedOwnerId);
+        setCurrentOwner(owner);
       }
     } catch (error) {
       console.error('Failed to load current owner:', error);
@@ -275,8 +271,8 @@ export default function DashboardScreen({ navigation }) {
       const parsedUser = JSON.parse(userData);
       const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
 
-      // Load prompts for owners OR viewers in "myself" (writer) mode
-      const shouldLoadPrompt = parsedUser?.role === 'owner' || storedOwnerId === 'myself';
+      // Load prompts when in writer mode (not viewing someone else)
+      const shouldLoadPrompt = !storedOwnerId || storedOwnerId === 'myself';
 
       if (shouldLoadPrompt) {
         console.log('📝 loadDailyPrompt: Fetching prompt (role:', parsedUser?.role, 'mode:', storedOwnerId, ')');
@@ -375,8 +371,10 @@ export default function DashboardScreen({ navigation }) {
     );
   }
 
-  const isInWriterMode = user?.role === 'viewer' && currentOwnerId === 'myself';
-  const isViewer = user?.role === 'viewer' && !isInWriterMode;
+  // Writer mode: writing your own stories (default for all users)
+  const isInWriterMode = !currentOwnerId || currentOwnerId === 'myself';
+  // Viewer mode: browsing someone else's stories
+  const isViewer = !isInWriterMode;
 
   return (
     <View style={styles.container}>
@@ -483,31 +481,22 @@ export default function DashboardScreen({ navigation }) {
 
           {/* Bottom Icon Navigation */}
           <View style={styles.bottomNav}>
-            {isViewer || isInWriterMode ? (
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => setShowOwnerSwitcher(true)}
-              >
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => setShowOwnerSwitcher(true)}
+            >
+              <View style={styles.navIconContainer}>
                 <Text style={styles.navIcon}>👤</Text>
-                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]} numberOfLines={1}>
-                  {isInWriterMode ? 'Myself' : currentOwner ? currentOwner.owner_name : 'Select'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.navButton}>
-                <View style={styles.navIconContainer}>
-                  <Text style={styles.navIcon}>🔥</Text>
-                  {stats?.currentStreak > 0 && (
-                    <View style={styles.navBadge}>
-                      <Text style={styles.navBadgeText}>{stats.currentStreak}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]}>
-                  Daily Streak
-                </Text>
+                {isInWriterMode && stats?.currentStreak > 0 && (
+                  <View style={styles.navBadge}>
+                    <Text style={styles.navBadgeText}>{stats.currentStreak}</Text>
+                  </View>
+                )}
               </View>
-            )}
+              <Text style={[styles.navLabel, { fontSize: getFontSize(11) }]} numberOfLines={1}>
+                {isViewer && currentOwner ? currentOwner.owner_name : isViewer ? 'Select' : 'Myself'}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.navButton}
@@ -576,6 +565,7 @@ export default function DashboardScreen({ navigation }) {
         visible={showOwnerSwitcher}
         onClose={() => setShowOwnerSwitcher(false)}
         onSelectOwner={handleOwnerSelect}
+        onAcceptInvite={() => navigation.navigate('AcceptInvite')}
       />
 
       {/* Notification Permission Modal */}

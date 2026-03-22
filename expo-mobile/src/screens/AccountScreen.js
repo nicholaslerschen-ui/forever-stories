@@ -167,26 +167,22 @@ export default function AccountScreen({ navigation }) {
             <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Email</Text>
             <Text style={[styles.value, { fontSize: getFontSize(16) }]}>{account?.email}</Text>
           </View>
-          {user?.role !== 'viewer' && (
-            <>
-              <View style={styles.profileRow}>
-                <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Birth Date</Text>
-                <Text style={[styles.value, { fontSize: getFontSize(16) }]}>
-                  {account?.birth_date
-                    ? new Date(account.birth_date).toLocaleDateString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: 'numeric',
-                      })
-                    : 'Not set'}
-                </Text>
-              </View>
-              <View style={styles.profileRow}>
-                <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Birth Location</Text>
-                <Text style={[styles.value, { fontSize: getFontSize(16) }]}>{account?.birth_location || 'Not set'}</Text>
-              </View>
-            </>
-          )}
+          <View style={styles.profileRow}>
+            <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Birth Date</Text>
+            <Text style={[styles.value, { fontSize: getFontSize(16) }]}>
+              {account?.birth_date
+                ? new Date(account.birth_date).toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric',
+                  })
+                : 'Not set'}
+            </Text>
+          </View>
+          <View style={styles.profileRow}>
+            <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Birth Location</Text>
+            <Text style={[styles.value, { fontSize: getFontSize(16) }]}>{account?.birth_location || 'Not set'}</Text>
+          </View>
           <View style={styles.profileRow}>
             <Text style={[styles.label, { fontSize: getFontSize(14) }]}>Timezone</Text>
             <Text style={[styles.value, { fontSize: getFontSize(16) }]}>{account?.timezone || 'Not set'}</Text>
@@ -201,47 +197,58 @@ export default function AccountScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Loved Ones Section - Only for owners */}
-      {user?.role !== 'viewer' && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Loved Ones</Text>
+      {/* Loved Ones Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Loved Ones</Text>
+          {accessGrants.length > 0 && (
             <Text style={[styles.sectionCount, { fontSize: getFontSize(16) }]}>{accessGrants.length}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('FamilyAccess')}
-          >
-            <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Loved Ones Access</Text>
-            <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
-              Invite loved ones and manage who can view your stories
-            </Text>
-            <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Manage access →</Text>
-          </TouchableOpacity>
+          )}
         </View>
-      )}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('FamilyAccess')}
+        >
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Invite Others</Text>
+          <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
+            Invite loved ones to view your stories
+          </Text>
+          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Send invite →</Text>
+        </TouchableOpacity>
 
-      {/* Submitted Questions Section - Only for owners */}
-      {user?.role !== 'viewer' && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Questions from Loved Ones</Text>
+        <TouchableOpacity
+          style={[styles.card, styles.cardSpacing]}
+          onPress={() => navigation.navigate('AcceptInvite')}
+        >
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Accept Invite</Text>
+          <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
+            Enter an invite code to view someone else's stories
+          </Text>
+          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Enter code →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Submitted Questions Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Questions from Loved Ones</Text>
+          {submittedQuestions.filter(q => q.status === 'pending').length > 0 && (
             <Text style={[styles.sectionCount, { fontSize: getFontSize(16) }]}>
               {submittedQuestions.filter(q => q.status === 'pending').length}
             </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('Questions')}
-          >
-            <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>View Questions</Text>
-            <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
-              Questions will appear as daily prompts
-            </Text>
-            <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>View all →</Text>
-          </TouchableOpacity>
+          )}
         </View>
-      )}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('Questions')}
+        >
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>View Questions</Text>
+          <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
+            Questions will appear as daily prompts
+          </Text>
+          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>View all →</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Subscription Section */}
       {user?.role !== 'viewer' && (
