@@ -27,7 +27,7 @@ export default function AIChatScreen({ navigation, route }) {
       role: 'assistant',
       content: isViewerMode
         ? `Hi! I'm ${ownerName}'s AI persona, built from their life stories. Ask me anything about their memories!`
-        : "Hi! I'm your Story Coach. I've read all your stories and I'm here to help you figure out what to write next. Ask me what's missing, or tell me about a memory and I'll help you expand on it!",
+        : "Hi! I've read all your stories. I can help you figure out what to write next, show you how your persona sounds to loved ones, or help you explore and expand on your memories. What would you like to do?",
     },
   ]);
   const [inputText, setInputText] = useState('');
@@ -142,10 +142,10 @@ export default function AIChatScreen({ navigation, route }) {
     }
   }, [messages]);
 
-  const headerTitle = isViewerMode ? `${ownerName}'s Persona` : 'Story Coach';
+  const headerTitle = isViewerMode ? `${ownerName}'s Persona` : 'My AI Assistant';
   const placeholder = isViewerMode
     ? `Ask about ${ownerName}'s memories...`
-    : 'What should I write about next?';
+    : 'Ask me anything about your stories...';
 
   // Loading state
   if (isPremium === null) {
