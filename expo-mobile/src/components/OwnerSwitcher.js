@@ -6,6 +6,7 @@ import ApiService from '../services/api';
 export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
   const [owners, setOwners] = useState([]);
   const [currentOwnerId, setCurrentOwnerId] = useState(null);
+  const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +19,10 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const currentOwner = await AsyncStorage.getItem('currentOwnerId');
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+
+      setUserName(parsedUser?.full_name || parsedUser?.email || 'Myself');
 
       // Get all owners this viewer has access to
       const data = await ApiService.getMyOwners(token);
@@ -35,6 +40,13 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
     await AsyncStorage.setItem('currentOwnerId', ownerId);
     setCurrentOwnerId(ownerId);
     onSelectOwner(ownerId);
+    onClose();
+  };
+
+  const selectMyself = async () => {
+    await AsyncStorage.setItem('currentOwnerId', 'myself');
+    setCurrentOwnerId('myself');
+    onSelectOwner('myself');
     onClose();
   };
 
@@ -56,12 +68,32 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner }) {
     </TouchableOpacity>
   );
 
+  const isMyselfActive = currentOwnerId === 'myself';
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>Select Owner</Text>
-          <Text style={styles.subtitle}>View stories and submit questions to:</Text>
+          <Text style={styles.title}>Switch Account</Text>
+          <Text style={styles.subtitle}>Write your own stories or view a loved one's</Text>
+
+          {/* "Myself" option */}
+          <TouchableOpacity
+            style={[styles.ownerCard, styles.myselfCard, isMyselfActive && styles.ownerCardActive]}
+            onPress={selectMyself}
+          >
+            <View style={styles.ownerInfo}>
+              <Text style={styles.ownerName}>{userName}</Text>
+              <Text style={styles.ownerEmail}>Write your own stories</Text>
+            </View>
+            {isMyselfActive && (
+              <Text style={styles.checkmark}>✓</Text>
+            )}
+          </TouchableOpacity>
+
+          {owners.length > 0 && (
+            <Text style={styles.sectionLabel}>Loved Ones</Text>
+          )}
 
           <FlatList
             data={owners}
@@ -102,6 +134,15 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 20,
   },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    marginTop: 4,
+  },
   list: {
     marginBottom: 16,
   },
@@ -115,6 +156,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#e5e7eb',
+  },
+  myselfCard: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#d1fae5',
   },
   ownerCardActive: {
     borderColor: '#e11d48',
