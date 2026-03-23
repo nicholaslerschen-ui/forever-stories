@@ -39,17 +39,81 @@ export default function MyStoriesScreen({ navigation }) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
 
-      if (parsedUser?.role === 'viewer') {
-        const currentOwnerId = await AsyncStorage.getItem('currentOwnerId');
-        if (currentOwnerId) {
-          const token = await AsyncStorage.getItem('authToken');
-          const data = await ApiService.getMyOwners(token);
-          const owner = data.owners.find(o => o.owner_id === currentOwnerId);
-          setCurrentOwner(owner);
+      const currentOwnerId = await AsyncStorage.getItem('currentOwnerId');
+      if (currentOwnerId && currentOwnerId !== 'myself') {
+        const token = await AsyncStorage.getItem('authToken');
+        const data = await ApiService.getMyOwners(token);
+        const owner = data.owners.find(o => o.owner_id === currentOwnerId);
+        setCurrentOwner(owner);
+
+        // Show one-time premium nudge alerts for viewers
+        if (owner && owner.subscription_tier !== 'premium') {
+          checkViewerPremiumNudge(owner);
         }
       }
     } catch (error) {
       console.error('Load user/owner error:', error);
+    }
+  };
+
+  const checkViewerPremiumNudge = async (owner) => {
+    try {
+      const count = owner.story_count || 0;
+      const name = owner.owner_name || 'your loved one';
+      const ownerId = owner.owner_id;
+
+      if (count >= 20) {
+        const key = `viewerNudge20_${ownerId}`;
+        const shown = await AsyncStorage.getItem(key);
+        if (!shown) {
+          await AsyncStorage.setItem(key, 'true');
+          Alert.alert(
+            'Story Limit Reached',
+            `${name} has used all 20 free stories and can't write more. Gift them Premium for unlimited stories, follow-up questions, and AI Persona Chat!`,
+            [
+              { text: 'Maybe Later', style: 'cancel' },
+              { text: 'Gift Premium', onPress: () => navigation.navigate('Premium', { giftForOwnerId: ownerId, giftForOwnerName: name }) }
+            ]
+          );
+          return;
+        }
+      }
+
+      if (count >= 15) {
+        const key = `viewerNudge15_${ownerId}`;
+        const shown = await AsyncStorage.getItem(key);
+        if (!shown) {
+          await AsyncStorage.setItem(key, 'true');
+          Alert.alert(
+            'Running Low on Stories',
+            `${name} has written ${count} of 20 free stories. Gift them Premium so they can keep preserving memories with unlimited stories!`,
+            [
+              { text: 'Maybe Later', style: 'cancel' },
+              { text: 'Gift Premium', onPress: () => navigation.navigate('Premium', { giftForOwnerId: ownerId, giftForOwnerName: name }) }
+            ]
+          );
+          return;
+        }
+      }
+
+      if (count >= 5) {
+        const key = `viewerNudge5_${ownerId}`;
+        const shown = await AsyncStorage.getItem(key);
+        if (!shown) {
+          await AsyncStorage.setItem(key, 'true');
+          Alert.alert(
+            'Help Capture Richer Stories',
+            `${name} has ${count} stories! Gift them Premium to unlock follow-up questions that help capture deeper details and richer memories after each story.`,
+            [
+              { text: 'Maybe Later', style: 'cancel' },
+              { text: 'Learn More', onPress: () => navigation.navigate('Premium', { giftForOwnerId: ownerId, giftForOwnerName: name }) }
+            ]
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Viewer premium nudge error:', error);
     }
   };
 
@@ -278,11 +342,30 @@ export default function MyStoriesScreen({ navigation }) {
       </TouchableOpacity>
 
       <Text style={[styles.title, { fontSize: getFontSize(28) }]}>
-        {user?.role === 'viewer' && currentOwner ? `${currentOwner.owner_name}'s Stories` : 'My Stories'}
+        {currentOwner ? `${currentOwner.owner_name}'s Stories` : 'My Stories'}
       </Text>
       <Text style={[styles.subtitle, { fontSize: getFontSize(16) }]}>
         {filteredStories.length} {filteredStories.length === stories.length ? 'stories written' : `of ${stories.length} stories`}
       </Text>
+
+      {/* Viewer Premium Banner */}
+      {currentOwner && currentOwner.subscription_tier !== 'premium' && currentOwner.story_count >= 5 && (
+        <TouchableOpacity
+          style={styles.viewerPremiumBanner}
+          onPress={() => navigation.navigate('Premium', {
+            giftForOwnerId: currentOwner.owner_id,
+            giftForOwnerName: currentOwner.owner_name,
+          })}
+        >
+          <Text style={[styles.viewerPremiumText, { fontSize: getFontSize(13) }]}>
+            {currentOwner.story_count >= 20
+              ? `🎁 ${currentOwner.owner_name} has reached the free limit — Gift Premium for unlimited stories`
+              : currentOwner.story_count >= 15
+              ? `🎁 ${currentOwner.story_count}/20 free stories used — Gift Premium to keep memories going`
+              : `🎁 Gift Premium for follow-up questions & richer stories →`}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Search Bar with Integrated Filter */}
       <View style={styles.searchContainer}>
@@ -656,5 +739,20 @@ const styles = StyleSheet.create({
   resetButtonText: {
     color: colors.white,
     fontWeight: '600',
+  },
+  viewerPremiumBanner: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  viewerPremiumText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400e',
   },
 });

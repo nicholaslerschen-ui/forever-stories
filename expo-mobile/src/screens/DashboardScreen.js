@@ -425,6 +425,25 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
+          {/* Viewer Premium Nudge (when viewing a non-premium owner with stories) */}
+          {isViewer && currentOwner && currentOwner.subscription_tier !== 'premium' && currentOwner.story_count >= 5 && (
+            <TouchableOpacity
+              style={styles.viewerPremiumBadge}
+              onPress={() => navigation.navigate('Premium', {
+                giftForOwnerId: currentOwner.owner_id,
+                giftForOwnerName: currentOwner.owner_name,
+              })}
+            >
+              <Text style={[styles.viewerPremiumBadgeText, { fontSize: getFontSize(12) }]}>
+                {currentOwner.story_count >= 20
+                  ? `🎁 ${currentOwner.owner_name} has reached the free story limit — Gift Premium to unlock unlimited stories`
+                  : currentOwner.story_count >= 15
+                  ? `🎁 ${currentOwner.owner_name} has ${currentOwner.story_count}/20 free stories — Gift Premium for unlimited stories & AI features`
+                  : `🎁 Gift Premium to ${currentOwner.owner_name} for richer stories with follow-up questions & AI Persona`}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Main Hero Content */}
           <View style={styles.heroContent}>
             <View style={styles.heroCard}>
@@ -664,6 +683,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#991b1b',
+  },
+  viewerPremiumBadge: {
+    backgroundColor: 'rgba(254, 243, 199, 0.9)',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 12,
+  },
+  viewerPremiumBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
   },
   heroContent: {
     flex: 1,

@@ -1658,13 +1658,16 @@ app.get('/api/viewers/my-owners', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Get all owners this user has access to via access_grants
+    // Include story count and subscription tier for premium nudges
     const result = await pool.query(
       `SELECT
         ag.owner_id,
         ag.is_active,
         ag.access_granted_at,
         u.full_name as owner_name,
-        u.email as owner_email
+        u.email as owner_email,
+        u.subscription_tier,
+        (SELECT COUNT(*) FROM prompt_responses pr WHERE pr.user_id = ag.owner_id)::int as story_count
        FROM access_grants ag
        JOIN users u ON ag.owner_id = u.id
        WHERE ag.recipient_user_id = $1
