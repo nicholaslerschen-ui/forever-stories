@@ -746,6 +746,20 @@ class ApiService {
     return response.json();
   }
 
+  async giftPremium(token, ownerId) {
+    const response = await fetch(`${API_URL}/api/subscriptions/gift`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ ownerId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to gift premium');
+    }
+    return response.json();
+  }
+
   // ===== AI FOLLOW-UP QUESTIONS =====
 
   async generateFollowUpQuestions(token, question, response) {

@@ -113,6 +113,17 @@ export default function OnboardingScreen({ navigation }) {
         })}
       </View>
 
+      {/* Premium Awareness */}
+      <View style={styles.premiumInfo}>
+        <Text style={styles.premiumInfoTitle}>Your Free Plan</Text>
+        <Text style={styles.premiumInfoText}>
+          Start with 20 free stories and daily prompts. When you're ready for more, upgrade to Premium for unlimited stories, AI follow-up questions, and AI Persona Chat.
+        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Premium')}>
+          <Text style={styles.premiumInfoLink}>Learn about Premium →</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.button, styles.buttonPrimary]}
@@ -248,5 +259,30 @@ const styles = StyleSheet.create({
   buttonSkipText: {
     color: '#6b7280',
     fontSize: 14,
+  },
+  premiumInfo: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+  },
+  premiumInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 8,
+  },
+  premiumInfoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  premiumInfoLink: {
+    fontSize: 14,
+    color: '#e11d48',
+    fontWeight: '600',
   },
 });

@@ -45,26 +45,62 @@ export default function FreeWriteScreen({ navigation }) {
 
   const checkAndShowShareModal = async () => {
     try {
-      // Check if user has already seen the share modal
+      const token = await AsyncStorage.getItem('authToken');
+      const stats = await ApiService.getUserStats(token);
+      const totalStories = stats.stats.totalResponses;
+
+      // Check premium milestones for free users
+      if (!isPremium) {
+        // 5-story milestone: highlight follow-up questions
+        if (totalStories >= 5) {
+          const shown = await AsyncStorage.getItem('premiumNudge5Shown');
+          if (!shown) {
+            await AsyncStorage.setItem('premiumNudge5Shown', 'true');
+            Alert.alert(
+              'Unlock Deeper Stories',
+              "You're on a roll with 5 stories! Upgrade to Premium to unlock follow-up questions — they help capture richer details and deeper memories after each story.",
+              [
+                { text: 'Maybe Later', style: 'cancel', onPress: () => navigation.goBack() },
+                { text: 'Learn More', onPress: () => navigation.navigate('Premium') }
+              ]
+            );
+            return;
+          }
+        }
+
+        // 15-story milestone: storage urgency
+        if (totalStories >= 15) {
+          const shown = await AsyncStorage.getItem('premiumNudge15Shown');
+          if (!shown) {
+            await AsyncStorage.setItem('premiumNudge15Shown', 'true');
+            Alert.alert(
+              'Running Low on Stories',
+              `You've written ${totalStories} of 20 free stories. Your storage is getting full — upgrade to Premium for unlimited stories!`,
+              [
+                { text: 'Maybe Later', style: 'cancel', onPress: () => navigation.goBack() },
+                { text: 'Upgrade Now', onPress: () => navigation.navigate('Premium') }
+              ]
+            );
+            return;
+          }
+        }
+      }
+
+      // Existing share modal logic
       const hasSeenShareModal = await AsyncStorage.getItem('hasSeenShareModal');
       if (hasSeenShareModal === 'true') {
         navigation.goBack();
         return;
       }
 
-      // Get user stats to check story count
-      const token = await AsyncStorage.getItem('authToken');
-      const stats = await ApiService.getUserStats(token);
-
-      // If user has 5 or more stories, show share modal (only once)
-      if (stats.stats.totalResponses >= 5) {
+      if (totalStories >= 5) {
         setShowShareModal(true);
         await AsyncStorage.setItem('hasSeenShareModal', 'true');
       } else {
         navigation.goBack();
       }
     } catch (error) {
-      console.error('Error checking share modal:', error);
+      console.error('Error checking post-submission prompts:', error);
       navigation.goBack();
     }
   };

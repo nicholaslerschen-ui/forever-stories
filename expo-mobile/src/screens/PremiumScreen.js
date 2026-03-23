@@ -16,8 +16,12 @@ import { useFontSize } from '../context/FontSizeContext';
 
 const REVENUECAT_API_KEY = 'test_eZryDvBZDHAfyRMCADhYxfKXEvc';
 
-export default function PremiumScreen({ navigation }) {
+export default function PremiumScreen({ navigation, route }) {
   const { getFontSize } = useFontSize();
+  const giftForOwnerId = route.params?.giftForOwnerId || null;
+  const giftForOwnerName = route.params?.giftForOwnerName || null;
+  const isGiftMode = !!giftForOwnerId;
+
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [packages, setPackages] = useState([]);
@@ -71,11 +75,31 @@ export default function PremiumScreen({ navigation }) {
 
       // Check if premium is now active
       if (customerInfo.entitlements.active['premium']) {
-        Alert.alert(
-          'Welcome to Premium!',
-          'You now have access to unlimited stories, follow-up questions, and AI Persona Chat.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        if (isGiftMode) {
+          // Apply premium to the owner's account
+          try {
+            const token = await AsyncStorage.getItem('authToken');
+            await ApiService.giftPremium(token, giftForOwnerId);
+            Alert.alert(
+              'Gift Sent!',
+              `${giftForOwnerName} now has Premium! AI Persona and all premium features are unlocked.`,
+              [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
+          } catch (giftError) {
+            console.error('Gift application failed:', giftError);
+            Alert.alert(
+              'Purchase Successful',
+              'Your purchase went through but we had trouble applying it. Please contact support.',
+              [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
+          }
+        } else {
+          Alert.alert(
+            'Welcome to Premium!',
+            'You now have access to unlimited stories, follow-up questions, and AI Persona Chat.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        }
       }
     } catch (error) {
       if (!error.userCancelled) {
@@ -170,9 +194,13 @@ export default function PremiumScreen({ navigation }) {
         <Text style={[styles.backText, { fontSize: getFontSize(16) }]}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.title, { fontSize: getFontSize(28) }]}>Unlock Premium</Text>
+      <Text style={[styles.title, { fontSize: getFontSize(28) }]}>
+        {isGiftMode ? `Gift Premium to ${giftForOwnerName}` : 'Unlock Premium'}
+      </Text>
       <Text style={[styles.subtitle, { fontSize: getFontSize(16) }]}>
-        Preserve richer, deeper memories with Premium.
+        {isGiftMode
+          ? `Unlock AI Persona, unlimited stories, and follow-up questions for ${giftForOwnerName}.`
+          : 'Preserve richer, deeper memories with Premium.'}
       </Text>
 
       {/* Story count warning */}
@@ -258,7 +286,7 @@ export default function PremiumScreen({ navigation }) {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={[styles.upgradeButtonText, { fontSize: getFontSize(18) }]}>
-              Subscribe Now
+              {isGiftMode ? `Gift Premium` : 'Subscribe Now'}
             </Text>
           )}
         </TouchableOpacity>

@@ -208,8 +208,22 @@ export default function AIChatScreen({ navigation, route }) {
           </View>
           <Text style={[styles.paywallTitle, { fontSize: getFontSize(24) }]}>Not Available Yet</Text>
           <Text style={[styles.paywallDescription, { fontSize: getFontSize(16) }]}>
-            AI Persona isn't available yet. {ownerName} needs to upgrade to Premium to enable this feature.
+            AI Persona isn't available yet. {ownerName} needs Premium to enable this feature.
           </Text>
+          <Text style={[styles.paywallDescription, { fontSize: getFontSize(16) }]}>
+            You can gift them a Premium subscription to unlock it.
+          </Text>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('Premium', {
+              giftForOwnerId: ownerId,
+              giftForOwnerName: ownerName,
+            })}
+          >
+            <Text style={[styles.upgradeButtonText, { fontSize: getFontSize(18) }]}>
+              Gift Premium to {ownerName}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     );

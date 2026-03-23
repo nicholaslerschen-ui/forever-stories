@@ -4277,6 +4277,53 @@ app.post('/api/subscriptions/set', authenticateToken, async (req, res) => {
   }
 });
 
+// Gift premium subscription to another user
+app.post('/api/subscriptions/gift', authenticateToken, async (req, res) => {
+  try {
+    const gifterId = req.user.userId;
+    const { ownerId } = req.body;
+
+    if (!ownerId) {
+      return res.status(400).json({ error: 'Owner ID required' });
+    }
+
+    // Verify the gifter has access to this owner
+    const accessCheck = await pool.query(
+      `SELECT id FROM access_grants
+       WHERE recipient_user_id = $1 AND owner_id = $2 AND is_active = TRUE`,
+      [gifterId, ownerId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'You do not have access to this account' });
+    }
+
+    // Apply premium to the owner's account
+    const endsAt = new Date();
+    endsAt.setFullYear(endsAt.getFullYear() + 1); // Default to 1 year, RevenueCat webhook will manage actual duration
+
+    await pool.query(
+      `UPDATE users SET
+        subscription_tier = 'premium',
+        subscription_status = 'active',
+        subscription_ends_at = $1
+       WHERE id = $2`,
+      [endsAt.toISOString(), ownerId]
+    );
+
+    // Log the gift
+    console.log(`Gift premium: user ${gifterId} gifted premium to owner ${ownerId}`);
+
+    res.json({
+      success: true,
+      message: 'Premium has been gifted successfully',
+    });
+  } catch (error) {
+    console.error('Gift premium error:', error);
+    res.status(500).json({ error: 'Failed to gift premium' });
+  }
+});
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================

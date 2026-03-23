@@ -411,6 +411,20 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
+          {/* Story Limit Warning (free users at 15+ stories) */}
+          {!isViewer && stats?.totalResponses >= 15 && stats?.storyLimit && (
+            <TouchableOpacity
+              style={styles.limitBadge}
+              onPress={() => navigation.navigate('Premium')}
+            >
+              <Text style={[styles.limitBadgeText, { fontSize: getFontSize(12) }]}>
+                {stats.totalResponses >= 20
+                  ? `📦 You've used all ${stats.storyLimit} free stories — Upgrade to keep writing`
+                  : `📦 ${stats.totalResponses} of ${stats.storyLimit} free stories used — Upgrade for unlimited`}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Main Hero Content */}
           <View style={styles.heroContent}>
             <View style={styles.heroCard}>
@@ -635,6 +649,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#92400e',
+  },
+  limitBadge: {
+    backgroundColor: 'rgba(254, 242, 242, 0.9)',
+    borderWidth: 1,
+    borderColor: '#e11d48',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 12,
+  },
+  limitBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#991b1b',
   },
   heroContent: {
     flex: 1,
