@@ -405,9 +405,9 @@ export default function DashboardScreen({ navigation }) {
     );
   }
 
-  // Writer mode: writing your own stories (default for all users)
-  const isInWriterMode = !currentOwnerId || currentOwnerId === 'myself';
-  // Viewer mode: browsing someone else's stories
+  // Writer mode: explicitly chose 'myself', or owner-role with no selection yet
+  const isInWriterMode = currentOwnerId === 'myself' || (!currentOwnerId && user?.role !== 'viewer');
+  // Viewer mode: browsing someone else's stories, or viewer-role with no selection yet
   const isViewer = !isInWriterMode;
 
   return (
