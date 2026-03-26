@@ -206,7 +206,9 @@ export default function DashboardScreen({ navigation }) {
 
       // Check daily prompt status when in writer mode
       const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
-      const writerMode = !storedOwnerId || storedOwnerId === 'myself';
+      // For viewer-role users with no stored preference, they'll default to viewer mode
+      const isViewerRole = parsedUser?.role === 'viewer';
+      const writerMode = storedOwnerId === 'myself' || (!storedOwnerId && !isViewerRole);
       if (writerMode) {
         console.log('📊 loadUserData: Checking daily prompt status...');
         await checkDailyPromptStatus(); // Wait for this to complete
@@ -246,18 +248,48 @@ export default function DashboardScreen({ navigation }) {
   const loadCurrentOwner = async () => {
     try {
       const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
-      setCurrentOwnerId(storedOwnerId);
 
-      if (!storedOwnerId || storedOwnerId === 'myself') {
-        // In writer mode — no owner context needed
+      if (storedOwnerId === 'myself') {
+        // Explicitly chose writer mode
+        setCurrentOwnerId('myself');
         setCurrentOwner(null);
-      } else {
-        // Viewing someone else — load their info
+        return;
+      }
+
+      if (storedOwnerId) {
+        // Explicitly chose a specific owner — load their info
+        setCurrentOwnerId(storedOwnerId);
         const token = await AsyncStorage.getItem('authToken');
         const data = await ApiService.getMyOwners(token);
         const owner = data.owners.find(o => o.owner_id === storedOwnerId);
         setCurrentOwner(owner);
+        return;
       }
+
+      // No stored preference (first load) — default based on signup role
+      const userData = await AsyncStorage.getItem('user');
+      const parsedUser = JSON.parse(userData);
+
+      if (parsedUser?.role === 'viewer') {
+        // Viewer signup: default to first connected owner
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          const data = await ApiService.getMyOwners(token);
+          if (data.owners && data.owners.length > 0) {
+            const firstOwner = data.owners[0];
+            await AsyncStorage.setItem('currentOwnerId', firstOwner.owner_id);
+            setCurrentOwnerId(firstOwner.owner_id);
+            setCurrentOwner(firstOwner);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to load owners for viewer default:', err);
+        }
+      }
+
+      // Owner signup or viewer with no connections: default to writer mode
+      setCurrentOwnerId(null);
+      setCurrentOwner(null);
     } catch (error) {
       console.error('Failed to load current owner:', error);
     }
@@ -272,7 +304,9 @@ export default function DashboardScreen({ navigation }) {
       const storedOwnerId = await AsyncStorage.getItem('currentOwnerId');
 
       // Load prompts when in writer mode (not viewing someone else)
-      const shouldLoadPrompt = !storedOwnerId || storedOwnerId === 'myself';
+      // Viewer-role users with no stored preference will default to viewer mode
+      const isViewerRole = parsedUser?.role === 'viewer';
+      const shouldLoadPrompt = storedOwnerId === 'myself' || (!storedOwnerId && !isViewerRole);
 
       if (shouldLoadPrompt) {
         console.log('📝 loadDailyPrompt: Fetching prompt (role:', parsedUser?.role, 'mode:', storedOwnerId, ')');
