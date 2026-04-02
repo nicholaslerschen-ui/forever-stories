@@ -258,12 +258,16 @@ export default function DashboardScreen({ navigation }) {
 
       if (storedOwnerId) {
         // Explicitly chose a specific owner — load their info
-        setCurrentOwnerId(storedOwnerId);
         const token = await AsyncStorage.getItem('authToken');
         const data = await ApiService.getMyOwners(token);
         const owner = data.owners.find(o => o.owner_id === storedOwnerId);
-        setCurrentOwner(owner);
-        return;
+        if (owner) {
+          setCurrentOwnerId(storedOwnerId);
+          setCurrentOwner(owner);
+          return;
+        }
+        // Stale owner ID from a previous session — clear it and fall through to default
+        await AsyncStorage.removeItem('currentOwnerId');
       }
 
       // No stored preference (first load) — default based on signup role

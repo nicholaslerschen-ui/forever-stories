@@ -61,8 +61,17 @@ export default function AccountScreen({ navigation }) {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            // Only remove auth token, preserve notification preferences
-            await AsyncStorage.removeItem('authToken');
+            // Remove auth token and user-specific session data
+            // Preserve notification preferences (keyed by user ID)
+            await AsyncStorage.multiRemove([
+              'authToken',
+              'user',
+              'currentOwnerId',
+              'onboardingComplete',
+              'hasSeenShareModal',
+              'premiumNudge5Shown',
+              'premiumNudge15Shown',
+            ]);
             navigation.replace('Login');
           },
         },

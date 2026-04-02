@@ -426,7 +426,7 @@ async function sendDailyPromptReminders(pool) {
 
     // Find owners who haven't answered today (in Phoenix timezone)
     const usersResult = await pool.query(
-      `SELECT DISTINCT u.id, u.full_name, u.current_streak
+      `SELECT DISTINCT u.id, u.full_name
        FROM users u
        WHERE u.role = 'owner'
        AND u.id NOT IN (
@@ -459,7 +459,7 @@ async function sendDailyPromptReminders(pool) {
         [user.id]
       );
 
-      await sendDailyPromptReminderNotification(pool, user.id, user.full_name, user.current_streak || 0);
+      await sendDailyPromptReminderNotification(pool, user.id, user.full_name, 0);
     }
 
     console.log('✅ Daily prompt reminder processing complete');

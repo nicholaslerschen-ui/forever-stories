@@ -1,6 +1,6 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@foreverstories.co';
 
@@ -84,6 +84,11 @@ If you didn't create this account, please ignore this email.
   `;
 
   try {
+    if (!resend) {
+      console.log('⚠️ Email not configured (no RESEND_API_KEY), skipping welcome email to:', userEmail);
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: [userEmail],
@@ -189,6 +194,11 @@ Forever Stories • Preserving memories for generations
   `;
 
   try {
+    if (!resend) {
+      console.log('⚠️ Email not configured (no RESEND_API_KEY), skipping invite email to:', recipientEmail);
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: [recipientEmail],
