@@ -94,14 +94,14 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      if (errorData.upgrade_required) {
+      if (errorData.upgrade_required || response.status === 403) {
         const error = new Error(errorData.message || 'Story limit reached');
         error.upgradeRequired = true;
         error.storyCount = errorData.storyCount;
         error.storyLimit = errorData.storyLimit;
         throw error;
       }
-      throw new Error('Failed to submit response');
+      throw new Error(errorData.error || 'Failed to submit response');
     }
     return response.json();
   }
@@ -191,14 +191,14 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      if (errorData.upgrade_required) {
+      if (errorData.upgrade_required || response.status === 403) {
         const error = new Error(errorData.message || 'Story limit reached');
         error.upgradeRequired = true;
         error.storyCount = errorData.storyCount;
         error.storyLimit = errorData.storyLimit;
         throw error;
       }
-      throw new Error('Failed to submit story');
+      throw new Error(errorData.error || 'Failed to submit story');
     }
     return response.json();
   }
