@@ -12,7 +12,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-export default function InviteParentScreen({ navigation }) {
+export default function InviteParentScreen({ navigation, route }) {
+  const fromDashboard = route.params?.fromDashboard;
   const [method, setMethod] = useState('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -45,7 +46,7 @@ export default function InviteParentScreen({ navigation }) {
         [
           {
             text: 'OK',
-            onPress: () => navigation.replace('Dashboard')
+            onPress: () => fromDashboard ? navigation.goBack() : navigation.replace('Dashboard')
           }
         ]
       );
@@ -57,12 +58,20 @@ export default function InviteParentScreen({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.replace('Dashboard');
+    fromDashboard ? navigation.goBack() : navigation.replace('Dashboard');
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Invite Someone to Share Their Stories</Text>
+      {fromDashboard && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+      )}
+      <Text style={[styles.title, fromDashboard && { marginTop: 10 }]}>Invite Someone to Share Their Stories</Text>
       <Text style={styles.subtitle}>
         Send an invite to a loved one so they can create their account and share their stories with you
       </Text>
@@ -142,6 +151,20 @@ export default function InviteParentScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <TouchableOpacity
+        style={styles.acceptCodeButton}
+        onPress={() => navigation.navigate('AcceptInvite')}
+      >
+        <Text style={styles.acceptCodeText}>Already have an invite code?</Text>
+        <Text style={styles.acceptCodeSubtext}>Enter a code from someone who invited you</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.skipButton}
         onPress={handleSkip}
@@ -157,6 +180,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+  },
+  backButton: {
+    marginTop: 50,
+    marginBottom: 10,
+  },
+  backText: {
+    color: '#e11d48',
+    fontSize: 16,
   },
   title: {
     fontSize: 28,
@@ -244,6 +275,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  dividerText: {
+    color: '#9ca3af',
+    paddingHorizontal: 12,
+    fontSize: 14,
+  },
+  acceptCodeButton: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  acceptCodeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e11d48',
+    marginBottom: 4,
+  },
+  acceptCodeSubtext: {
+    fontSize: 13,
+    color: '#6b7280',
   },
   skipButton: {
     padding: 16,

@@ -215,7 +215,168 @@ Forever Stories • Preserving memories for generations
   }
 }
 
+/**
+ * Send password reset email with 6-digit code
+ */
+async function sendPasswordResetEmail(userEmail, userName, resetCode) {
+  const subject = 'Forever Stories - Password Reset Code';
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #e11d48; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .code-box { background-color: #fff; border: 2px dashed #e11d48; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
+    .code-text { font-size: 36px; font-weight: bold; color: #e11d48; letter-spacing: 6px; font-family: 'Courier New', monospace; }
+    .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Password Reset</h1>
+    </div>
+    <div class="content">
+      <h2>Hi ${userName || 'there'},</h2>
+
+      <p>We received a request to reset your Forever Stories password. Use the code below to set a new password:</p>
+
+      <div class="code-box">
+        <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 10px;">Your Reset Code:</p>
+        <div class="code-text">${resetCode}</div>
+      </div>
+
+      <p>This code expires in <strong>15 minutes</strong>.</p>
+
+      <p style="color: #6b7280; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.</p>
+    </div>
+    <div class="footer">
+      <p>Forever Stories &bull; Preserving memories for generations</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const textBody = `
+Password Reset - Forever Stories
+
+Hi ${userName || 'there'},
+
+We received a request to reset your Forever Stories password.
+
+Your Reset Code: ${resetCode}
+
+This code expires in 15 minutes.
+
+If you didn't request a password reset, you can safely ignore this email.
+
+---
+Forever Stories - Preserving memories for generations
+  `;
+
+  try {
+    if (!resend) {
+      console.log('⚠️ Email not configured (no RESEND_API_KEY), skipping reset email to:', userEmail);
+      console.log('🔑 Reset code for', userEmail, ':', resetCode);
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [userEmail],
+      subject: subject,
+      html: htmlBody,
+      text: textBody
+    });
+
+    console.log('✅ Password reset email sent to:', userEmail, '- ID:', response.data?.id);
+    return { success: true, messageId: response.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send password reset email to:', userEmail, error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Send support contact email (from in-app form)
+ */
+async function sendSupportEmail(userEmail, userName, subject, message) {
+  const supportEmail = 'support@foreverstories.co';
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #e11d48; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .field { margin-bottom: 16px; }
+    .label { font-weight: bold; color: #374151; }
+    .message { background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>New Support Request</h2>
+    </div>
+    <div class="content">
+      <div class="field">
+        <p class="label">From:</p>
+        <p>${userName} (${userEmail})</p>
+      </div>
+      <div class="field">
+        <p class="label">Subject:</p>
+        <p>${subject}</p>
+      </div>
+      <div class="field">
+        <p class="label">Message:</p>
+        <div class="message">${message}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const textBody = `New Support Request\n\nFrom: ${userName} (${userEmail})\nSubject: ${subject}\n\nMessage:\n${message}`;
+
+  if (!resend) {
+    console.log('📧 [DEV] Support email would be sent to:', supportEmail);
+    console.log('From:', userEmail, '(' + userName + ')');
+    console.log('Subject:', subject);
+    console.log('Message:', message);
+    return { success: true };
+  }
+
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [supportEmail],
+      replyTo: userEmail,
+      subject: `Support: ${subject}`,
+      html: htmlBody,
+      text: textBody
+    });
+
+    console.log('✅ Support email sent - ID:', response.data?.id);
+    return { success: true, messageId: response.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send support email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   sendWelcomeEmail,
-  sendInviteEmail
+  sendInviteEmail,
+  sendPasswordResetEmail,
+  sendSupportEmail
 };

@@ -49,9 +49,17 @@ export default function SignupScreen({ navigation }) {
       // If owner used reverse invite code, auto-connect was handled by backend
       if (response.reverseInviteUsed) {
         Alert.alert(
-          '🎉 Connection Established!',
+          'Connection Established!',
           `Great news! ${response.viewerName} will now have access to view your stories once you start sharing them.\n\nYou can manage their access anytime from your account settings.`,
           [{ text: 'Continue', onPress: () => navigation.replace('Onboarding') }]
+        );
+      } else if (response.inviteAccepted) {
+        // Viewer used an owner's invite code at signup
+        await AsyncStorage.setItem('currentOwnerId', response.ownerId);
+        Alert.alert(
+          'Connected!',
+          `You now have access to ${response.ownerName}'s stories!`,
+          [{ text: 'Continue', onPress: () => navigation.replace('Dashboard') }]
         );
       } else {
         // Viewers get option to invite their parent, owners go through onboarding
@@ -111,22 +119,20 @@ export default function SignupScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Invite Code for Owners (Optional) */}
-        {role === 'owner' && (
-          <View style={styles.inviteCodeSection}>
-            <Text style={styles.inviteCodeLabel}>
-              Have an invite code from a loved one? (Optional)
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter 8-character code"
-              value={inviteCode}
-              onChangeText={(text) => setInviteCode(text.toUpperCase())}
-              autoCapitalize="characters"
-              maxLength={8}
-            />
-          </View>
-        )}
+        {/* Invite Code (Optional - works for both roles) */}
+        <View style={styles.inviteCodeSection}>
+          <Text style={styles.inviteCodeLabel}>
+            Have an invite code from a loved one? (Optional)
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter 8-character code"
+            value={inviteCode}
+            onChangeText={(text) => setInviteCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={8}
+          />
+        </View>
 
         <TextInput
           style={styles.input}

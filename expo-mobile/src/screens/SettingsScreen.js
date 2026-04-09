@@ -77,6 +77,24 @@ export default function SettingsScreen({ navigation }) {
         </View>
       </View>
 
+      {/* Notifications Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>
+          Notifications
+        </Text>
+        <TouchableOpacity
+          style={styles.helpButton}
+          onPress={() => navigation.navigate('NotificationSettings')}
+        >
+          <Text style={[styles.helpButtonText, { fontSize: getFontSize(16) }]}>
+            Notification Preferences
+          </Text>
+          <Text style={[styles.helpButtonSubtext, { fontSize: getFontSize(13) }]}>
+            Change reminder times and notification types
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.spacer} />
     </ScrollView>
   );
@@ -154,6 +172,21 @@ const styles = StyleSheet.create({
   previewText: {
     color: '#111',
     lineHeight: 24,
+  },
+  helpButton: {
+    backgroundColor: '#f9f9f9',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
+  helpButtonText: {
+    color: '#111',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  helpButtonSubtext: {
+    color: '#666',
   },
   spacer: {
     height: 40,

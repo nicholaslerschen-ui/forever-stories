@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
-export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAcceptInvite }) {
+export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAcceptInvite, onInviteWriter }) {
   const [owners, setOwners] = useState([]);
   const [currentOwnerId, setCurrentOwnerId] = useState(null);
   const [userName, setUserName] = useState('');
@@ -115,6 +115,15 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAccep
             </TouchableOpacity>
           )}
 
+          {onInviteWriter && (
+            <TouchableOpacity
+              style={styles.inviteWriterButton}
+              onPress={() => { onClose(); onInviteWriter(); }}
+            >
+              <Text style={styles.inviteWriterText}>Invite Someone to Write</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeText}>Cancel</Text>
           </TouchableOpacity>
@@ -207,6 +216,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#e11d48',
+  },
+  inviteWriterButton: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 2,
+    borderColor: '#d1fae5',
+  },
+  inviteWriterText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#059669',
   },
   closeButton: {
     padding: 16,

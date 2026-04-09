@@ -290,6 +290,21 @@ export default function AccountScreen({ navigation }) {
         </View>
       )}
 
+      {/* Support Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Support</Text>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('ContactSupport')}
+        >
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Need Help? Contact Us</Text>
+          <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
+            Send us a message and we'll get back to you
+          </Text>
+          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Send message →</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Settings Section */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { fontSize: getFontSize(18) }]}>Settings</Text>
@@ -297,7 +312,7 @@ export default function AccountScreen({ navigation }) {
           style={styles.card}
           onPress={() => navigation.navigate('NotificationSettings')}
         >
-          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>🔔 Notification Settings</Text>
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Notification Settings</Text>
           <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
             Manage which notifications you receive
           </Text>

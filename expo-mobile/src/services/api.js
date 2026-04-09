@@ -61,6 +61,36 @@ class ApiService {
     return response.json();
   }
 
+  async forgotPassword(email) {
+    const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to send reset code');
+    }
+
+    return response.json();
+  }
+
+  async resetPassword(email, code, newPassword) {
+    const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to reset password');
+    }
+
+    return response.json();
+  }
+
   async getUserStats(token) {
     const response = await fetch(`${API_URL}/api/user/stats`, {
       headers: getHeaders(token, false),
@@ -106,8 +136,12 @@ class ApiService {
     return response.json();
   }
 
-  async getMyStories(token) {
-    const response = await fetch(`${API_URL}/api/prompts/history`, {
+  async getMyStories(token, ownerId = null) {
+    const url = ownerId && ownerId !== 'myself'
+      ? `${API_URL}/api/prompts/history?ownerId=${ownerId}`
+      : `${API_URL}/api/prompts/history`;
+
+    const response = await fetch(url, {
       headers: getHeaders(token, false),
     });
 
@@ -776,6 +810,22 @@ class ApiService {
     return res.json();
   }
 
+  // ===== SUPPORT =====
+
+  async sendSupportMessage(token, subject, message) {
+    const response = await fetch(`${API_URL}/api/support/contact`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ subject, message }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to send message');
+    }
+
+    return response.json();
+  }
 }
 
 export default new ApiService();

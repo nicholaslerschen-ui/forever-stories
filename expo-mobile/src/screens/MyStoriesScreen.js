@@ -120,7 +120,8 @@ export default function MyStoriesScreen({ navigation }) {
   const loadStories = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      const data = await ApiService.getMyStories(token);
+      const currentOwnerId = await AsyncStorage.getItem('currentOwnerId');
+      const data = await ApiService.getMyStories(token, currentOwnerId);
       // Sort by newest first
       const sortedStories = data.stories.sort((a, b) =>
         new Date(b.created_at) - new Date(a.created_at)

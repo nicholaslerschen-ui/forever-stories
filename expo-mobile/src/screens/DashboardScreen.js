@@ -39,6 +39,10 @@ export default function DashboardScreen({ navigation }) {
   // Notification permission modal
   const [showNotificationModal, setShowNotificationModal] = useState(false);
 
+  // Dismissable banners
+  const [limitBadgeDismissed, setLimitBadgeDismissed] = useState(false);
+  const [viewerPremiumDismissed, setViewerPremiumDismissed] = useState(false);
+
   // Prompt and response state
   const [prompt, setPrompt] = useState(null);
   const [response, setResponse] = useState('');
@@ -216,7 +220,17 @@ export default function DashboardScreen({ navigation }) {
       console.log('📊 loadUserData: Complete, setting loading to false');
     } catch (error) {
       console.error('❌ loadUserData error:', error);
-      Alert.alert('Error', 'Failed to load data');
+      // If token is missing or invalid, redirect to login
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        navigation.replace('Login');
+        return;
+      }
+      // Still load local user data even if stats API fails
+      try {
+        const userData = await AsyncStorage.getItem('user');
+        if (userData) setUser(JSON.parse(userData));
+      } catch (_) {}
     } finally {
       setLoading(false);
       console.log('📊 loadUserData: Finally block - loading set to false');
@@ -333,6 +347,10 @@ export default function DashboardScreen({ navigation }) {
   };
 
   const handleOwnerSelect = async (ownerId) => {
+    // Reset dismissable banners when switching accounts
+    setLimitBadgeDismissed(false);
+    setViewerPremiumDismissed(false);
+
     // Reload data for the newly selected owner
     await loadCurrentOwner();
     // Refresh all data (loadUserData will handle prompt check if user is owner)
@@ -450,36 +468,46 @@ export default function DashboardScreen({ navigation }) {
           )}
 
           {/* Story Limit Warning (free users at 15+ stories) */}
-          {!isViewer && stats?.totalResponses >= 15 && stats?.storyLimit && (
-            <TouchableOpacity
-              style={styles.limitBadge}
-              onPress={() => navigation.navigate('Premium')}
-            >
-              <Text style={[styles.limitBadgeText, { fontSize: getFontSize(12) }]}>
-                {stats.totalResponses >= 20
-                  ? `📦 You've used all ${stats.storyLimit} free stories — Upgrade to keep writing`
-                  : `📦 ${stats.totalResponses} of ${stats.storyLimit} free stories used — Upgrade for unlimited`}
-              </Text>
-            </TouchableOpacity>
+          {!isViewer && stats?.totalResponses >= 15 && stats?.storyLimit && !limitBadgeDismissed && (
+            <View style={styles.limitBadge}>
+              <TouchableOpacity
+                style={styles.badgeContent}
+                onPress={() => navigation.navigate('Premium')}
+              >
+                <Text style={[styles.limitBadgeText, { fontSize: getFontSize(12), flex: 1 }]}>
+                  {stats.totalResponses >= 20
+                    ? `📦 You've used all ${stats.storyLimit} free stories — Upgrade to keep writing`
+                    : `📦 ${stats.totalResponses} of ${stats.storyLimit} free stories used — Upgrade for unlimited`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setLimitBadgeDismissed(true)} style={styles.badgeDismiss}>
+                <Text style={styles.badgeDismissText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Viewer Premium Nudge (when viewing a non-premium owner with stories) */}
-          {isViewer && currentOwner && currentOwner.subscription_tier !== 'premium' && currentOwner.story_count >= 5 && (
-            <TouchableOpacity
-              style={styles.viewerPremiumBadge}
-              onPress={() => navigation.navigate('Premium', {
-                giftForOwnerId: currentOwner.owner_id,
-                giftForOwnerName: currentOwner.owner_name,
-              })}
-            >
-              <Text style={[styles.viewerPremiumBadgeText, { fontSize: getFontSize(12) }]}>
-                {currentOwner.story_count >= 20
-                  ? `🎁 ${currentOwner.owner_name} has reached the free story limit — Gift Premium to unlock unlimited stories`
-                  : currentOwner.story_count >= 15
-                  ? `🎁 ${currentOwner.owner_name} has ${currentOwner.story_count}/20 free stories — Gift Premium for unlimited stories & AI features`
-                  : `🎁 Gift Premium to ${currentOwner.owner_name} for richer stories with follow-up questions & AI Persona`}
-              </Text>
-            </TouchableOpacity>
+          {isViewer && currentOwner && currentOwner.subscription_tier !== 'premium' && currentOwner.story_count >= 5 && !viewerPremiumDismissed && (
+            <View style={styles.viewerPremiumBadge}>
+              <TouchableOpacity
+                style={styles.badgeContent}
+                onPress={() => navigation.navigate('Premium', {
+                  giftForOwnerId: currentOwner.owner_id,
+                  giftForOwnerName: currentOwner.owner_name,
+                })}
+              >
+                <Text style={[styles.viewerPremiumBadgeText, { fontSize: getFontSize(12), flex: 1 }]}>
+                  {currentOwner.story_count >= 20
+                    ? `🎁 ${currentOwner.owner_name} has reached the free story limit — Gift Premium to unlock unlimited stories`
+                    : currentOwner.story_count >= 15
+                    ? `🎁 ${currentOwner.owner_name} has ${currentOwner.story_count}/20 free stories — Gift Premium for unlimited stories & AI features`
+                    : `🎁 Gift Premium to ${currentOwner.owner_name} for richer stories with follow-up questions & AI Persona`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setViewerPremiumDismissed(true)} style={styles.badgeDismiss}>
+                <Text style={styles.badgeDismissText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Main Hero Content */}
@@ -501,14 +529,24 @@ export default function DashboardScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
               ) : !currentOwner ? (
-                <TouchableOpacity
-                  style={styles.ctaButton}
-                  onPress={() => navigation.navigate('AcceptInvite')}
-                >
-                  <Text style={[styles.ctaButtonText, { fontSize: getFontSize(18) }]}>
-                    ✉️ Accept Invite
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.viewerActions}>
+                  <TouchableOpacity
+                    style={styles.ctaButton}
+                    onPress={() => navigation.navigate('AcceptInvite')}
+                  >
+                    <Text style={[styles.ctaButtonText, { fontSize: getFontSize(18) }]}>
+                      ✉️ Accept Invite
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => navigation.navigate('InviteParent', { fromDashboard: true })}
+                  >
+                    <Text style={[styles.secondaryButtonText, { fontSize: getFontSize(16) }]}>
+                      Invite Someone to Write
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <View style={styles.viewerActions}>
                   <TouchableOpacity
@@ -637,6 +675,7 @@ export default function DashboardScreen({ navigation }) {
         onClose={() => setShowOwnerSwitcher(false)}
         onSelectOwner={handleOwnerSelect}
         onAcceptInvite={() => navigation.navigate('AcceptInvite')}
+        onInviteWriter={() => navigation.navigate('InviteParent', { fromDashboard: true })}
       />
 
       {/* Notification Permission Modal */}
@@ -716,16 +755,32 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 10,
     borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   limitBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#991b1b',
   },
+  badgeContent: {
+    flex: 1,
+  },
+  badgeDismiss: {
+    paddingLeft: 10,
+    paddingVertical: 4,
+  },
+  badgeDismissText: {
+    color: 'rgba(0,0,0,0.4)',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   viewerPremiumBadge: {
     backgroundColor: 'rgba(254, 243, 199, 0.9)',
     borderWidth: 1,
     borderColor: '#f59e0b',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginHorizontal: 20,

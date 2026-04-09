@@ -28,6 +28,8 @@ import InviteParentScreen from '../screens/InviteParentScreen';
 import IntakeInviteScreen from '../screens/IntakeInviteScreen';
 import PersonalInfoScreen from '../screens/PersonalInfoScreen';
 import PremiumScreen from '../screens/PremiumScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ContactSupportScreen from '../screens/ContactSupportScreen';
 import ApiService from '../services/api';
 
 const Stack = createNativeStackNavigator();
@@ -80,6 +82,7 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
         <Stack.Screen name="IntakeInvite" component={IntakeInviteScreen} />
@@ -103,6 +106,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AcceptInvite" component={AcceptInviteScreen} />
         <Stack.Screen name="InviteParent" component={InviteParentScreen} />
         <Stack.Screen name="Premium" component={PremiumScreen} />
+        <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

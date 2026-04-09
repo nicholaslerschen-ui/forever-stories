@@ -540,6 +540,60 @@ const handleSignup = async (req, res) => {
       }
     }
 
+    // Handle regular invite code for viewers (owner sent invite to viewer)
+    let regularInviteUsed = false;
+    let ownerName = null;
+    let ownerId = null;
+
+    if (reverseInviteCode && userRole === 'viewer' && !reverseInviteUsed) {
+      try {
+        // Look up regular invite token
+        const inviteResult = await pool.query(
+          `SELECT * FROM invite_tokens
+           WHERE invite_code = $1 AND is_active = TRUE AND expires_at > NOW()`,
+          [reverseInviteCode.toUpperCase()]
+        );
+
+        if (inviteResult.rows.length > 0) {
+          const invite = inviteResult.rows[0];
+          ownerId = invite.owner_id;
+
+          // Get owner's name
+          const ownerResult = await pool.query(
+            'SELECT full_name, email FROM users WHERE id = $1',
+            [ownerId]
+          );
+
+          if (ownerResult.rows.length > 0) {
+            ownerName = ownerResult.rows[0].full_name;
+
+            // Create access grant (viewer can now see owner's stories)
+            await pool.query(
+              `INSERT INTO access_grants (owner_id, recipient_user_id, recipient_email, access_level, granted_by, granted_at, invited_via_code)
+               VALUES ($1, $2, $3, 'full', $1, NOW(), $4)
+               ON CONFLICT DO NOTHING`,
+              [ownerId, user.id, user.email, reverseInviteCode.toUpperCase()]
+            );
+
+            // Mark invite as used
+            await pool.query(
+              `UPDATE invite_tokens
+               SET used_at = NOW(), used_by_user_id = $1, is_active = FALSE
+               WHERE id = $2`,
+              [user.id, invite.id]
+            );
+
+            regularInviteUsed = true;
+            console.log(`✅ Viewer ${user.full_name} connected to owner ${ownerName} via invite code at signup`);
+          }
+        } else {
+          console.log(`⚠️ Invalid or expired invite code for viewer: ${reverseInviteCode}`);
+        }
+      } catch (inviteError) {
+        console.error('Error processing viewer invite:', inviteError);
+      }
+    }
+
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
@@ -561,6 +615,13 @@ const handleSignup = async (req, res) => {
     if (reverseInviteUsed) {
       response.reverseInviteUsed = true;
       response.viewerName = viewerName;
+    }
+
+    // Add regular invite info if applicable
+    if (regularInviteUsed) {
+      response.inviteAccepted = true;
+      response.ownerName = ownerName;
+      response.ownerId = ownerId;
     }
 
     // Send welcome email (async, don't wait for it)
@@ -633,6 +694,108 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Forgot Password - send reset code
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user (case-insensitive)
+    const result = await pool.query(
+      'SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (result.rows.length === 0) {
+      return res.json({ message: 'If an account exists, a reset code has been sent.' });
+    }
+
+    const user = result.rows[0];
+
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCodeHash = await bcrypt.hash(resetCode, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store code hash and expiry
+    await pool.query(
+      'UPDATE users SET reset_code_hash = $1, reset_code_expires = $2 WHERE id = $3',
+      [resetCodeHash, expiresAt, user.id]
+    );
+
+    // Send email
+    const emailService = require('./services/emailService');
+    await emailService.sendPasswordResetEmail(user.email, user.full_name, resetCode);
+
+    res.json({ message: 'If an account exists, a reset code has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Reset Password - verify code and set new password
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, code, and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    if (!/\d/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one number' });
+    }
+
+    // Find user
+    const result = await pool.query(
+      'SELECT id, reset_code_hash, reset_code_expires FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    const user = result.rows[0];
+
+    // Check if code exists and hasn't expired
+    if (!user.reset_code_hash || !user.reset_code_expires) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    if (new Date() > new Date(user.reset_code_expires)) {
+      return res.status(400).json({ error: 'Reset code has expired. Please request a new one.' });
+    }
+
+    // Verify the code
+    const validCode = await bcrypt.compare(code, user.reset_code_hash);
+    if (!validCode) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    // Hash new password and clear reset code
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, reset_code_hash = NULL, reset_code_expires = NULL, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
@@ -2631,9 +2794,53 @@ Generate 2-3 follow-up questions to help them share more about this story.`
 app.get('/api/prompts/history', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
+    const { ownerId } = req.query;
 
-    const result = await pool.query(
-      `SELECT
+    let queryText;
+    let queryParams;
+
+    if (ownerId && ownerId !== 'myself') {
+      // Viewer requesting a specific owner's stories — verify access first
+      const accessCheck = await pool.query(
+        'SELECT id FROM access_grants WHERE owner_id = $1 AND recipient_user_id = $2 AND is_active = TRUE',
+        [ownerId, userId]
+      );
+      if (accessCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'You do not have access to this account' });
+      }
+
+      queryText = `SELECT
+        pr.*,
+        p.prompt_text, p.domain, p.story_type, p.emotional_weight, p.gate_tag,
+        sq.question_text as question,
+        u.full_name as owner_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', uf.id,
+              'filename', uf.filename,
+              'file_path', uf.file_path,
+              'file_type', uf.file_type,
+              'file_size', uf.file_size
+            )
+            ORDER BY rf.display_order
+          ) FILTER (WHERE uf.id IS NOT NULL),
+          '[]'
+        ) as files
+       FROM prompt_responses pr
+       LEFT JOIN prompts p ON pr.prompt_id = p.id
+       LEFT JOIN submitted_questions sq ON pr.submitted_question_id = sq.id
+       LEFT JOIN response_files rf ON pr.id = rf.response_id
+       LEFT JOIN user_files uf ON rf.file_id = uf.id
+       LEFT JOIN users u ON pr.user_id = u.id
+       WHERE pr.user_id = $1
+       GROUP BY pr.id, p.id, sq.id, u.full_name
+       ORDER BY pr.created_at DESC
+       LIMIT 50`;
+      queryParams = [ownerId];
+    } else {
+      // Default: user's own stories + all connected owners' stories
+      queryText = `SELECT
         pr.*,
         p.prompt_text, p.domain, p.story_type, p.emotional_weight, p.gate_tag,
         sq.question_text as question,
@@ -2665,9 +2872,11 @@ app.get('/api/prompts/history', authenticateToken, async (req, res) => {
           )
        GROUP BY pr.id, p.id, sq.id, u.full_name
        ORDER BY pr.created_at DESC
-       LIMIT 50`,
-      [userId]
-    );
+       LIMIT 50`;
+      queryParams = [userId];
+    }
+
+    const result = await pool.query(queryText, queryParams);
 
     // Generate signed URLs for all files in responses
     for (const response of result.rows) {
@@ -4358,6 +4567,41 @@ app.get('/api/debug/response-files/:responseId', authenticateToken, async (req, 
   } catch (error) {
     console.error('Debug query error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Support contact form
+app.post('/api/support/contact', authenticateToken, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    const userId = req.user.userId;
+
+    if (!subject || !message) {
+      return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    if (message.length > 5000) {
+      return res.status(400).json({ error: 'Message is too long (max 5000 characters)' });
+    }
+
+    // Get user info
+    const userResult = await pool.query(
+      'SELECT email, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+    const emailService = require('./services/emailService');
+    await emailService.sendSupportEmail(user.email, user.full_name, subject, message);
+
+    res.json({ message: 'Your message has been sent. We\'ll get back to you soon!' });
+  } catch (error) {
+    console.error('Support contact error:', error);
+    res.status(500).json({ error: 'Failed to send message. Please try again.' });
   }
 });
 

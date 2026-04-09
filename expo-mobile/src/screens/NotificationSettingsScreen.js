@@ -8,19 +8,45 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Modal,
+  FlatList,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 
+const TIME_OPTIONS = [];
+for (let h = 6; h <= 22; h++) {
+  for (let m = 0; m < 60; m += 30) {
+    const hour24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const label = `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+    TIME_OPTIONS.push({ label, value: hour24 });
+  }
+}
+
+function formatTimeDisplay(time24) {
+  if (!time24) return '9:00 AM';
+  const parts = time24.split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parts[1] || '00';
+  const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${hour12}:${m} ${ampm}`;
+}
+
 export default function NotificationSettingsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(null); // null or 'daily_prompt_time' or 'streak_reminder_time'
   const [preferences, setPreferences] = useState({
     notifications_enabled: true,
     daily_prompt_enabled: true,
+    daily_prompt_time: '09:00',
     family_questions_enabled: true,
     responses_received_enabled: true,
     streak_reminders_enabled: true,
+    streak_reminder_time: '20:00',
     invites_enabled: true,
   });
 
@@ -159,6 +185,18 @@ export default function NotificationSettingsScreen({ navigation }) {
           />
         </View>
 
+        {preferences.daily_prompt_enabled && preferences.notifications_enabled && (
+          <TouchableOpacity
+            style={styles.timePickerRow}
+            onPress={() => setShowTimePicker('daily_prompt_time')}
+          >
+            <Text style={styles.timePickerLabel}>Reminder Time</Text>
+            <Text style={styles.timePickerValue}>
+              {formatTimeDisplay(preferences.daily_prompt_time)}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.divider} />
 
         <View style={styles.settingRow}>
@@ -239,6 +277,61 @@ export default function NotificationSettingsScreen({ navigation }) {
           <Text style={styles.savingText}>Saving...</Text>
         </View>
       )}
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={!!showTimePicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowTimePicker(null)}
+      >
+        <View style={styles.timeModalOverlay}>
+          <View style={styles.timeModalContainer}>
+            <View style={styles.timeModalHeader}>
+              <Text style={styles.timeModalTitle}>
+                {showTimePicker === 'daily_prompt_time'
+                  ? 'Daily Reminder Time'
+                  : 'Streak Reminder Time'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowTimePicker(null)}>
+                <Text style={styles.timeModalClose}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={TIME_OPTIONS}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => {
+                const isSelected =
+                  showTimePicker && preferences[showTimePicker]?.startsWith(item.value);
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.timeOption,
+                      isSelected && styles.timeOptionSelected,
+                    ]}
+                    onPress={() => {
+                      savePreference(showTimePicker, item.value);
+                      setShowTimePicker(null);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.timeOptionText,
+                        isSelected && styles.timeOptionTextSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {isSelected && (
+                      <Text style={styles.timeOptionCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -361,5 +454,75 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 14,
     color: '#666',
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingLeft: 15,
+  },
+  timePickerLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  timePickerValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e11d48',
+  },
+  timeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  timeModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+  },
+  timeModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  timeModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  timeModalClose: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e11d48',
+  },
+  timeOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  timeOptionSelected: {
+    backgroundColor: '#fef2f2',
+  },
+  timeOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  timeOptionTextSelected: {
+    color: '#e11d48',
+    fontWeight: '600',
+  },
+  timeOptionCheck: {
+    fontSize: 18,
+    color: '#e11d48',
+    fontWeight: 'bold',
   },
 });
