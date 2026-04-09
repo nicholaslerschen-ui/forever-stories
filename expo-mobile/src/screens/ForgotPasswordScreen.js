@@ -147,6 +147,8 @@ export default function ForgotPasswordScreen({ navigation }) {
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
+              textContentType="none"
+              autoComplete="off"
             />
 
             <TextInput
@@ -155,6 +157,8 @@ export default function ForgotPasswordScreen({ navigation }) {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
+              textContentType="none"
+              autoComplete="off"
             />
 
             <TouchableOpacity
