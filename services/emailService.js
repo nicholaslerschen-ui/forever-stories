@@ -307,7 +307,7 @@ Forever Stories - Preserving memories for generations
  * Send support contact email (from in-app form)
  */
 async function sendSupportEmail(userEmail, userName, subject, message) {
-  const supportEmail = 'support@foreverstories.co';
+  const supportEmail = process.env.SUPPORT_DESTINATION_EMAIL || 'nicklerschen@yahoo.com';
 
   const htmlBody = `
 <!DOCTYPE html>
