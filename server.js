@@ -1459,6 +1459,73 @@ app.get('/api/access/my-access', authenticateToken, async (req, res) => {
 // INVITE SYSTEM (PHASE 2)
 // ============================================================================
 
+// Generate invite code only (for share sheet flow - no email/SMS sent)
+app.post('/api/invites/generate', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { type } = req.body; // 'standard' or 'reverse'
+
+    const userCheck = await pool.query(
+      'SELECT role, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let inviteCode;
+    let isUnique = false;
+
+    if (type === 'reverse') {
+      // Viewer generating reverse invite for an owner to join
+      while (!isUnique) {
+        inviteCode = generateInviteCode();
+        const existing = await pool.query(
+          'SELECT id FROM reverse_invite_tokens WHERE invite_code = $1',
+          [inviteCode]
+        );
+        isUnique = existing.rows.length === 0;
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      await pool.query(
+        `INSERT INTO reverse_invite_tokens
+         (viewer_id, invite_code, expires_at, delivery_method, is_active)
+         VALUES ($1, $2, $3, 'share', TRUE)`,
+        [userId, inviteCode, expiresAt]
+      );
+    } else {
+      // Owner generating standard invite for a viewer
+      while (!isUnique) {
+        inviteCode = generateInviteCode();
+        const existing = await pool.query(
+          'SELECT id FROM invite_tokens WHERE invite_code = $1',
+          [inviteCode]
+        );
+        isUnique = existing.rows.length === 0;
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      await pool.query(
+        `INSERT INTO invite_tokens
+         (owner_id, invite_code, expires_at, delivery_method, is_active)
+         VALUES ($1, $2, $3, 'share', TRUE)`,
+        [userId, inviteCode, expiresAt]
+      );
+    }
+
+    res.json({ success: true, inviteCode });
+  } catch (error) {
+    console.error('Generate invite code error:', error);
+    res.status(500).json({ error: 'Failed to generate invite code' });
+  }
+});
+
 // Owner sends invite to family member
 app.post('/api/invites/send', authenticateToken, async (req, res) => {
   try {

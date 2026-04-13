@@ -14,11 +14,8 @@ import AIChatScreen from '../screens/AIChatScreen';
 import FreeWriteScreen from '../screens/FreeWriteScreen';
 import AccountScreen from '../screens/AccountScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import ManageFamilyScreen from '../screens/ManageFamilyScreen';
-import FamilyAccessScreen from '../screens/FamilyAccessScreen';
 import FamilyQuestionsScreen from '../screens/FamilyQuestionsScreen';
-import InviteFamilyScreen from '../screens/InviteFamilyScreen';
-import EditAccessScreen from '../screens/EditAccessScreen';
+import ManageAccessScreen from '../screens/ManageAccessScreen';
 import QuestionsScreen from '../screens/QuestionsScreen';
 import SubmitQuestionScreen from '../screens/SubmitQuestionScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -94,11 +91,8 @@ export default function AppNavigator() {
         <Stack.Screen name="FreeWrite" component={FreeWriteScreen} />
         <Stack.Screen name="Account" component={AccountScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-        <Stack.Screen name="ManageFamily" component={ManageFamilyScreen} />
-        <Stack.Screen name="FamilyAccess" component={FamilyAccessScreen} />
+        <Stack.Screen name="ManageAccess" component={ManageAccessScreen} />
         <Stack.Screen name="FamilyQuestions" component={FamilyQuestionsScreen} />
-        <Stack.Screen name="InviteFamily" component={InviteFamilyScreen} />
-        <Stack.Screen name="EditAccess" component={EditAccessScreen} />
         <Stack.Screen name="Questions" component={QuestionsScreen} />
         <Stack.Screen name="SubmitQuestion" component={SubmitQuestionScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />

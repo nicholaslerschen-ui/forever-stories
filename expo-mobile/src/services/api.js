@@ -654,6 +654,36 @@ class ApiService {
     return response.json();
   }
 
+  async generateInviteCode(token) {
+    const response = await fetch(`${API_URL}/api/invites/generate`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ type: 'standard' }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate invite code');
+    }
+
+    return response.json();
+  }
+
+  async generateReverseInviteCode(token) {
+    const response = await fetch(`${API_URL}/api/invites/generate`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ type: 'reverse' }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate invite code');
+    }
+
+    return response.json();
+  }
+
   async acceptInvite(token, inviteCode) {
     const response = await fetch(`${API_URL}/api/invites/accept`, {
       method: 'POST',

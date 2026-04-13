@@ -216,13 +216,13 @@ export default function AccountScreen({ navigation }) {
         </View>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate('FamilyAccess')}
+          onPress={() => navigation.navigate('ManageAccess')}
         >
-          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Invite Others</Text>
+          <Text style={[styles.cardTitle, { fontSize: getFontSize(16) }]}>Manage Access</Text>
           <Text style={[styles.cardSubtitle, { fontSize: getFontSize(14) }]}>
-            Invite loved ones to view your stories
+            Send invites and manage who can view your stories
           </Text>
-          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Send invite →</Text>
+          <Text style={[styles.cardLink, { fontSize: getFontSize(14) }]}>Manage →</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

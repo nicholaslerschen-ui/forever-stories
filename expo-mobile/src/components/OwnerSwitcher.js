@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import { shareInvite } from '../utils/shareInvite';
 
 export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAcceptInvite, onInviteWriter }) {
   const [owners, setOwners] = useState([]);
@@ -118,7 +119,7 @@ export default function OwnerSwitcher({ visible, onClose, onSelectOwner, onAccep
           {onInviteWriter && (
             <TouchableOpacity
               style={styles.inviteWriterButton}
-              onPress={() => { onClose(); onInviteWriter(); }}
+              onPress={() => { onClose(); shareInvite('viewer'); }}
             >
               <Text style={styles.inviteWriterText}>Invite Someone to Write</Text>
             </TouchableOpacity>
