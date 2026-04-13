@@ -4603,6 +4603,30 @@ app.post('/api/subscriptions/gift', authenticateToken, async (req, res) => {
   }
 });
 
+// Sync subscription status (client-reported, complements webhook)
+app.post('/api/subscriptions/sync', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { isPremium, expiresAt } = req.body;
+
+    if (isPremium) {
+      await pool.query(
+        `UPDATE users SET
+          subscription_tier = 'premium',
+          subscription_status = 'active',
+          subscription_ends_at = $1
+         WHERE id = $2`,
+        [expiresAt ? new Date(expiresAt) : null, userId]
+      );
+    }
+
+    res.json({ success: true, tier: isPremium ? 'premium' : 'free' });
+  } catch (error) {
+    console.error('Subscription sync error:', error);
+    res.status(500).json({ error: 'Failed to sync subscription' });
+  }
+});
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================

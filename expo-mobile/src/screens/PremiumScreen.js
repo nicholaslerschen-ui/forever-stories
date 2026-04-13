@@ -14,8 +14,6 @@ import Purchases from 'react-native-purchases';
 import ApiService from '../services/api';
 import { useFontSize } from '../context/FontSizeContext';
 
-const REVENUECAT_API_KEY = 'test_eZryDvBZDHAfyRMCADhYxfKXEvc';
-
 export default function PremiumScreen({ navigation, route }) {
   const { getFontSize } = useFontSize();
   const giftForOwnerId = route.params?.giftForOwnerId || null;
@@ -75,6 +73,15 @@ export default function PremiumScreen({ navigation, route }) {
 
       // Check if premium is now active
       if (customerInfo.entitlements.active['premium']) {
+        // Sync subscription status to backend immediately
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          const entitlement = customerInfo.entitlements.active['premium'];
+          await ApiService.syncSubscription(token, true, entitlement.expirationDate);
+        } catch (syncErr) {
+          console.log('Subscription sync (webhook will handle):', syncErr.message);
+        }
+
         if (isGiftMode) {
           // Apply premium to the owner's account
           try {

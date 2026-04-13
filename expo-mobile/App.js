@@ -5,7 +5,7 @@ import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import AppNavigator from './src/navigation/AppNavigator';
 import { FontSizeProvider } from './src/context/FontSizeContext';
 
-const REVENUECAT_API_KEY = 'test_eZryDvBZDHAfyRMCADhYxfKXEvc';
+const REVENUECAT_API_KEY = 'appl_YntqdavXkJnesgAnAIfxzGBpWLV';
 
 export default function App() {
   useEffect(() => {

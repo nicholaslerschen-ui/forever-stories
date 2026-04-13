@@ -13,6 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 import ApiService from '../services/api';
 
 export default function SignupScreen({ navigation }) {
@@ -45,6 +46,8 @@ export default function SignupScreen({ navigation }) {
       const response = await ApiService.signup(email, password, fullName, role, inviteCode.trim() || null);
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      // Identify user with RevenueCat for subscription management
+      try { await Purchases.logIn(response.user.id); } catch (e) { console.log('RevenueCat logIn:', e.message); }
 
       // If owner used reverse invite code, auto-connect was handled by backend
       if (response.reverseInviteUsed) {

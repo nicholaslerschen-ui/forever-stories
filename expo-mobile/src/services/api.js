@@ -824,6 +824,20 @@ class ApiService {
     return response.json();
   }
 
+  async syncSubscription(token, isPremium, expiresAt) {
+    const response = await fetch(`${API_URL}/api/subscriptions/sync`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ isPremium, expiresAt }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to sync subscription');
+    }
+    return response.json();
+  }
+
   // ===== AI FOLLOW-UP QUESTIONS =====
 
   async generateFollowUpQuestions(token, question, response) {

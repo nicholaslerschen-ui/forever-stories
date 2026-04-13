@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -49,6 +50,12 @@ export default function AppNavigator() {
         // Validate token by making a lightweight API call
         const stats = await ApiService.getUserStats(token);
         if (stats) {
+          // Identify returning user with RevenueCat
+          const userData = await AsyncStorage.getItem('user');
+          if (userData) {
+            const user = JSON.parse(userData);
+            try { await Purchases.logIn(user.id); } catch (e) { console.log('RevenueCat logIn:', e.message); }
+          }
           setInitialRoute('Dashboard');
         }
       }

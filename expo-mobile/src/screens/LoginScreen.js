@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 import ApiService from '../services/api';
 
 export default function LoginScreen({ navigation }) {
@@ -30,6 +31,8 @@ export default function LoginScreen({ navigation }) {
       const response = await ApiService.login(email, password);
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      // Identify user with RevenueCat for subscription management
+      try { await Purchases.logIn(response.user.id); } catch (e) { console.log('RevenueCat logIn:', e.message); }
       navigation.replace('Dashboard');
     } catch (error) {
       Alert.alert('Login Failed', error.message);
