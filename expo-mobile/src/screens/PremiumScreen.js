@@ -52,7 +52,7 @@ export default function PremiumScreen({ navigation, route }) {
           setSelectedPackage(monthly || offerings.current.availablePackages[0]);
         }
       } catch (rcError) {
-        console.log('RevenueCat not configured yet:', rcError.message);
+        console.log('RevenueCat not available:', rcError.message);
       }
     } catch (error) {
       console.error('Failed to load subscription data:', error);

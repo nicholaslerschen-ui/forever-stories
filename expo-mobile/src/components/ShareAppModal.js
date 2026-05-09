@@ -124,7 +124,7 @@ export default function ShareAppModal({ visible, onClose }) {
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>You've Written 5 Stories!</Text>
+            <Text style={styles.title}>You're on a Roll!</Text>
 
             {/* Message */}
             <Text style={styles.message}>

@@ -86,14 +86,14 @@ export default function FreeWriteScreen({ navigation }) {
         }
       }
 
-      // Existing share modal logic
+      // Share modal logic (show once at 3+ stories)
       const hasSeenShareModal = await AsyncStorage.getItem('hasSeenShareModal');
       if (hasSeenShareModal === 'true') {
         navigation.goBack();
         return;
       }
 
-      if (totalStories >= 5) {
+      if (totalStories >= 3) {
         setShowShareModal(true);
         await AsyncStorage.setItem('hasSeenShareModal', 'true');
       } else {

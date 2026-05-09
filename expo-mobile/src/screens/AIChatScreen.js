@@ -33,11 +33,23 @@ export default function AIChatScreen({ navigation, route }) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(null); // null = loading, true/false = known
+  const [userName, setUserName] = useState('');
   const flatListRef = useRef(null);
 
   useEffect(() => {
     checkPremiumStatus();
+    loadUserName();
   }, []);
+
+  const loadUserName = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        setUserName(parsed.fullName || '');
+      }
+    } catch (e) {}
+  };
 
   const checkPremiumStatus = async () => {
     try {
@@ -142,7 +154,8 @@ export default function AIChatScreen({ navigation, route }) {
     }
   }, [messages]);
 
-  const headerTitle = isViewerMode ? `${ownerName}'s Persona` : 'My AI Assistant';
+  const firstName = isViewerMode ? ownerName : (userName ? userName.split(' ')[0] : '');
+  const headerTitle = firstName ? `${firstName}'s Persona` : 'AI Persona';
   const placeholder = isViewerMode
     ? `Ask about ${ownerName}'s memories...`
     : 'Ask me anything about your stories...';

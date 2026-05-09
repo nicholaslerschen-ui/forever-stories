@@ -359,7 +359,6 @@ export default function SettingsScreen({ navigation }) {
             </View>
           )}
         </View>
-        )}
       </View>
 
       {/* Delete Account Section */}
