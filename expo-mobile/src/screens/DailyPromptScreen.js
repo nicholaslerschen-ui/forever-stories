@@ -87,16 +87,13 @@ export default function DailyPromptScreen({ navigation, route }) {
       } else {
         // Load today's daily prompt
         const data = await ApiService.getTodayPrompt(token);
-        console.log('📝 Today prompt data:', JSON.stringify(data, null, 2));
 
         if (data.answered || data.alreadyAnswered || data.promptAnswered) {
           setAnswered(true);
           if (data.prompt) {
-            console.log('📝 Setting answered prompt:', data.prompt);
             setPrompt(data.prompt);
           }
         } else if (data.prompt) {
-          console.log('📝 Setting new prompt - ID:', data.prompt.id, 'gate_tag:', data.prompt.gate_tag);
           setPrompt(data.prompt);
         } else {
           // No prompt available
@@ -293,8 +290,6 @@ export default function DailyPromptScreen({ navigation, route }) {
 
   const handleSkipWithReason = async (skipReason) => {
     try {
-      console.log('⚠️ handleSkipWithReason - prompt object:', prompt);
-      console.log('⚠️ Calling skipPrompt with ID:', prompt.id);
       const token = await AsyncStorage.getItem('authToken');
       const result = await ApiService.skipPrompt(token, prompt.id, skipReason);
 

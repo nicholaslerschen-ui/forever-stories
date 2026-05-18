@@ -80,18 +80,14 @@ export default function DashboardScreen({ navigation }) {
 
   // Check for first visit after loading is complete and user is loaded
   useEffect(() => {
-    console.log('📊 Loading state:', loading, 'User loaded:', !!user);
     if (!loading && user) {
-      console.log('📊 Dashboard finished loading, checking first visit...');
       checkFirstVisit();
     }
   }, [loading, user]);
 
   const checkFirstVisit = async () => {
-    console.log('🔔 checkFirstVisit: Starting...');
 
     if (!user || !user.id) {
-      console.log('⚠️ User not loaded yet, skipping notification check');
       return;
     }
 
@@ -99,19 +95,13 @@ export default function DashboardScreen({ navigation }) {
       // Make the key user-specific so each account gets asked
       const storageKey = `notificationPermissionAsked_${user.id}`;
       const hasAskedForNotifications = await AsyncStorage.getItem(storageKey);
-      console.log('🔔 Notification permission asked before?', hasAskedForNotifications);
-      console.log('🔔 Storage key:', storageKey);
 
       if (!hasAskedForNotifications) {
-        console.log('🔔 Will show notification modal in 1 second...');
         // Show modal after a short delay to let dashboard load
         setTimeout(() => {
-          console.log('🔔 Timeout fired! Setting showNotificationModal to TRUE');
           setShowNotificationModal(true);
-          console.log('🔔 setShowNotificationModal(true) called');
         }, 1000);
       } else {
-        console.log('🔔 User already made choice, initializing push notifications');
         // If they already made a choice, initialize notifications
         initializePushNotifications();
       }
@@ -124,14 +114,12 @@ export default function DashboardScreen({ navigation }) {
     try {
       // Initialize push notifications
       await PushNotificationService.initialize();
-      console.log('✅ Push notifications initialized');
     } catch (error) {
       console.error('Failed to initialize push notifications:', error);
     }
   };
 
   const handleAcceptNotifications = async () => {
-    console.log('✅ User accepted notifications');
     setShowNotificationModal(false);
 
     if (user && user.id) {
@@ -150,7 +138,6 @@ export default function DashboardScreen({ navigation }) {
       await initializePushNotifications();
 
       // Note: Alert temporarily disabled until native rebuild
-      console.log('✅ Notification preferences saved (native push will work after app rebuild)');
       /*
       Alert.alert(
         'Notifications Enabled',
@@ -165,7 +152,6 @@ export default function DashboardScreen({ navigation }) {
   };
 
   const handleDeclineNotifications = async () => {
-    console.log('❌ User declined notifications');
     setShowNotificationModal(false);
 
     if (user && user.id) {
@@ -197,14 +183,12 @@ export default function DashboardScreen({ navigation }) {
   );
 
   const loadUserData = async () => {
-    console.log('📊 loadUserData: Starting...');
     try {
       const token = await AsyncStorage.getItem('authToken');
       const userData = await AsyncStorage.getItem('user');
       const statsData = await ApiService.getUserStats(token);
 
       const parsedUser = JSON.parse(userData);
-      console.log('📊 loadUserData: User loaded -', parsedUser?.email, 'role:', parsedUser?.role);
       setUser(parsedUser);
       setStats(statsData.stats);
 
@@ -214,10 +198,8 @@ export default function DashboardScreen({ navigation }) {
       const isViewerRole = parsedUser?.role === 'viewer';
       const writerMode = storedOwnerId === 'myself' || (!storedOwnerId && !isViewerRole);
       if (writerMode) {
-        console.log('📊 loadUserData: Checking daily prompt status...');
         await checkDailyPromptStatus(); // Wait for this to complete
       }
-      console.log('📊 loadUserData: Complete, setting loading to false');
     } catch (error) {
       console.error('❌ loadUserData error:', error);
       // If token is missing or invalid, redirect to login
@@ -233,7 +215,6 @@ export default function DashboardScreen({ navigation }) {
       } catch (_) {}
     } finally {
       setLoading(false);
-      console.log('📊 loadUserData: Finally block - loading set to false');
     }
   };
 
@@ -315,7 +296,6 @@ export default function DashboardScreen({ navigation }) {
 
   const loadDailyPrompt = async () => {
     try {
-      console.log('📝 loadDailyPrompt: Starting...');
       const token = await AsyncStorage.getItem('authToken');
       const userData = await AsyncStorage.getItem('user');
       const parsedUser = JSON.parse(userData);
@@ -327,19 +307,14 @@ export default function DashboardScreen({ navigation }) {
       const shouldLoadPrompt = storedOwnerId === 'myself' || (!storedOwnerId && !isViewerRole);
 
       if (shouldLoadPrompt) {
-        console.log('📝 loadDailyPrompt: Fetching prompt (role:', parsedUser?.role, 'mode:', storedOwnerId, ')');
         const data = await ApiService.getTodayPrompt(token);
-        console.log('📝 loadDailyPrompt: Response received:', data);
 
         if (data.prompt) {
-          console.log('📝 loadDailyPrompt: Setting prompt:', data.prompt);
           setPrompt(data.prompt);
           setDailyPromptCompleted(data.alreadyAnswered || data.answered || data.promptAnswered || false);
         } else {
-          console.log('📝 loadDailyPrompt: No prompt in response');
         }
       } else {
-        console.log('📝 loadDailyPrompt: Viewer mode, skipping');
       }
     } catch (error) {
       console.error('❌ Failed to load daily prompt:', error);

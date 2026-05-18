@@ -15,9 +15,7 @@ export default function App() {
           Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
         }
         Purchases.configure({ apiKey: REVENUECAT_API_KEY });
-        console.log('RevenueCat initialized');
       } catch (error) {
-        console.log('RevenueCat init error:', error.message);
       }
     };
     initRevenueCat();

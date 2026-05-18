@@ -28,17 +28,14 @@ class PushNotificationService {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log('Push notifications already initialized');
       return;
     }
 
     try {
-      console.log('Initializing push notifications...');
 
       // Request permission
       const hasPermission = await this.requestPermission();
       if (!hasPermission) {
-        console.log('Push notification permission denied');
         return;
       }
 
@@ -49,7 +46,6 @@ class PushNotificationService {
       this.setupNotificationHandlers();
 
       this.isInitialized = true;
-      console.log('✅ Push notifications initialized successfully');
     } catch (error) {
       console.error('Failed to initialize push notifications:', error);
     }
@@ -61,7 +57,6 @@ class PushNotificationService {
   async requestPermission() {
     try {
       if (!Device.isDevice) {
-        console.log('Must use physical device for Push Notifications');
         return false;
       }
 
@@ -74,11 +69,9 @@ class PushNotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('❌ Notification permission denied');
         return false;
       }
 
-      console.log('✅ Notification permission granted');
       return true;
     } catch (error) {
       console.error('Error requesting permission:', error);
@@ -101,7 +94,6 @@ class PushNotificationService {
         projectId: projectId || undefined,
       })).data;
 
-      console.log('📱 Expo Push Token:', token);
 
       this.currentToken = token;
 
@@ -122,14 +114,12 @@ class PushNotificationService {
     try {
       const authToken = await AsyncStorage.getItem('authToken');
       if (!authToken) {
-        console.log('No auth token found, skipping token registration');
         return;
       }
 
       const deviceType = Platform.OS; // 'ios' or 'android'
 
       await ApiService.registerPushToken(authToken, deviceToken, deviceType);
-      console.log('✅ Device token registered with backend');
     } catch (error) {
       console.error('Failed to register token with backend:', error);
     }
@@ -141,12 +131,10 @@ class PushNotificationService {
   setupNotificationHandlers() {
     // Handle notifications received while app is foregrounded
     this.notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📬 Foreground notification received:', notification);
     });
 
     // Handle notification responses (user tapped notification)
     this.responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('📭 Notification tapped:', response);
       this.handleNotificationOpen(response.notification.request.content.data);
     });
 
@@ -154,7 +142,6 @@ class PushNotificationService {
     Notifications.getLastNotificationResponseAsync()
       .then(response => {
         if (response) {
-          console.log('📪 Notification opened app from killed state:', response);
           this.handleNotificationOpen(response.notification.request.content.data);
         }
       });
@@ -168,7 +155,6 @@ class PushNotificationService {
     try {
       const notificationType = data?.type;
 
-      console.log('Handling notification:', notificationType, data);
 
       // Store the notification data for navigation
       AsyncStorage.setItem('pendingNotification', JSON.stringify(data));
@@ -214,7 +200,6 @@ class PushNotificationService {
           break;
 
         default:
-          console.log('Unknown notification type:', type);
           global.navigationRef.current?.navigate('Dashboard');
       }
     } catch (error) {
@@ -245,7 +230,6 @@ class PushNotificationService {
       this.currentToken = null;
       this.isInitialized = false;
 
-      console.log('✅ Push notifications unregistered');
     } catch (error) {
       console.error('Error unregistering push notifications:', error);
     }

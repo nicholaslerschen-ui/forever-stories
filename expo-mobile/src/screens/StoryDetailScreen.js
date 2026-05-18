@@ -54,9 +54,7 @@ export default function StoryDetailScreen({ route, navigation }) {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const data = await ApiService.getStoryDetail(token, storyId);
-      console.log('Loaded story with', data.story.files?.length || 0, 'files');
       if (data.story.files) {
-        console.log('File IDs:', data.story.files.map(f => f.id));
       }
       setStory(data.story);
     } catch (error) {
@@ -119,27 +117,21 @@ export default function StoryDetailScreen({ route, navigation }) {
 
       // Upload new files if any selected
       if (selectedMedia.length > 0) {
-        console.log('Uploading', selectedMedia.length, 'new files...');
         setUploading(true);
         const uploadResult = await ApiService.uploadFiles(token, selectedMedia);
         newFileIds = uploadResult.files.map(f => f.id);
-        console.log('Uploaded file IDs:', newFileIds);
         setUploading(false);
       }
 
       // Combine existing file IDs with newly uploaded file IDs
       const existingFileIds = existingFiles.map(f => f.id);
       const allFileIds = [...existingFileIds, ...newFileIds];
-      console.log('Existing file IDs:', existingFileIds);
-      console.log('All file IDs being sent:', allFileIds);
 
       const followUpData = editedFollowUps.length > 0 ? editedFollowUps : null;
       await ApiService.updateStory(token, storyId, editedText, editedTitle, allFileIds, followUpData);
-      console.log('Story updated, reloading...');
 
       // Reload the story to get updated data with signed URLs
       await loadStory();
-      console.log('Story reloaded');
       setIsEditing(false);
       setSelectedMedia([]);
       setExistingFiles([]);

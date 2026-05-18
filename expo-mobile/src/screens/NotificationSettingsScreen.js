@@ -57,9 +57,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   const loadPreferences = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      console.log('📥 Loading notification preferences...');
       const prefs = await ApiService.getNotificationPreferences(token);
-      console.log('📥 Preferences loaded:', prefs);
       setPreferences(prefs);
     } catch (error) {
       console.error('❌ Failed to load preferences:', error);

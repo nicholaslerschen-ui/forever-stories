@@ -27,8 +27,7 @@ class ApiService {
         const error = await response.json();
         throw new Error(error.error || 'Login failed');
       } catch (e) {
-        // If response is not JSON (e.g., HTML error page from ngrok)
-        throw new Error('Server is not responding. Please check if the backend is running.');
+        throw new Error('Server is not responding. Please try again.');
       }
     }
 
@@ -53,7 +52,7 @@ class ApiService {
         const error = await response.json();
         errorMessage = error.error || 'Signup failed';
       } catch (e) {
-        errorMessage = 'Server is not responding. Please check if the backend is running.';
+        errorMessage = 'Server is not responding. Please try again.';
       }
       throw new Error(errorMessage);
     }
@@ -254,8 +253,7 @@ class ApiService {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': 'true'
-        // No Content-Type - browser/RN sets it automatically for FormData
+        // No Content-Type - RN sets it automatically for FormData
       },
       body: formData
     });
@@ -287,7 +285,6 @@ class ApiService {
   }
 
   async skipPrompt(token, promptId, skipReason = null) {
-    console.log('🔄 Skipping prompt:', promptId, 'reason:', skipReason);
     const response = await fetch(`${API_URL}/api/prompts/skip`, {
       method: 'POST',
       headers: getHeaders(token),

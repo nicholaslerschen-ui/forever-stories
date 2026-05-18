@@ -61,7 +61,6 @@ export default function AppNavigator() {
       }
     } catch (error) {
       // Token invalid or expired — clear it and go to login
-      console.log('Auth check failed, going to login:', error.message);
       await AsyncStorage.removeItem('authToken');
     } finally {
       setIsLoading(false);
