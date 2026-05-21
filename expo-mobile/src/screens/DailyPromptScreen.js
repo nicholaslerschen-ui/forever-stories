@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as StoreReview from 'expo-store-review';
 import ApiService from '../services/api';
 import RatingComponent from '../components/RatingComponent';
 import SkipClarificationModal from '../components/SkipClarificationModal';
@@ -203,6 +204,16 @@ export default function DailyPromptScreen({ navigation, route }) {
             );
             return;
           }
+        }
+      }
+
+      // Rating prompt at 5 stories (show once)
+      if (totalStories >= 5) {
+        const hasRequestedReview = await AsyncStorage.getItem('hasRequestedReview');
+        if (!hasRequestedReview) {
+          await AsyncStorage.setItem('hasRequestedReview', 'true');
+          const isAvailable = await StoreReview.isAvailableAsync();
+          if (isAvailable) await StoreReview.requestReview();
         }
       }
 
